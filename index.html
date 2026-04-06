@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚀 מסע הגלקסיה — יורה חלל שיתופי</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --pink:   #ff80ff; --cyan: #80ffff; --gold: #ffd700;
+  --white:  #fff0ff; --red:  #ff4444; --bg:   #04000e;
+  --orange: #ff8800; --green:#44ff88;
+}
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:var(--bg);
+  font-family:'Segoe UI',system-ui,Arial,sans-serif;
+  color:var(--white); user-select:none;
+}
+#gameCanvas { position:fixed; top:0; left:0; width:100%; height:100%; display:block; }
+
+/* ── Screen Overlays ── */
+.screen {
+  position:fixed; inset:0; display:none; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+  background:radial-gradient(ellipse at 50% 30%,#200045 0%,#04000e 65%);
+  z-index:20;
+}
+.screen.active { display:flex; }
+
+/* ── TOP HUD ── */
+#hud {
+  position:fixed; top:0; left:0; right:0; height:60px;
+  background:linear-gradient(180deg,rgba(4,0,14,.93) 70%,transparent);
+  border-bottom:1px solid rgba(255,128,255,.12);
+  display:none; align-items:center; padding:0 20px; gap:12px; z-index:15;
+  direction:ltr;
+}
+#hud.visible { display:flex; }
+.hud-group { display:flex; align-items:center; gap:10px; }
+.hud-left  { flex:1; }
+.hud-mid   { flex:1; justify-content:center; display:flex; }
+.hud-right { flex:1; justify-content:flex-end; display:flex; }
+.hud-pill {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 14px; border-radius:22px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,128,255,.18);
+  font-size:15px; font-weight:700; white-space:nowrap;
+}
+.hud-pill .lbl { font-size:10px; color:#aa88cc; letter-spacing:1px; }
+.hud-pill.role     .val { color:var(--pink);   font-weight:900; }
+.hud-pill.crystals .val { color:var(--gold);   }
+.hud-pill.weapon   .val { color:#88ffcc;       }
+.hud-pill.wave     .val { color:var(--cyan);   font-size:16px; font-weight:900; }
+.hud-pill.hp       .val { color:var(--red);    font-size:20px; letter-spacing:3px; }
+.hud-pill.bomb     .val { color:var(--orange); font-weight:900; }
+
+/* ── Cooldown toast ── */
+#cooldown-toast {
+  position:fixed; bottom:180px; left:50%; transform:translateX(-50%);
+  padding:8px 22px; border-radius:28px;
+  background:rgba(0,0,0,.75); border:1px solid var(--pink);
+  font-size:15px; color:var(--pink); text-align:center; display:none; z-index:16;
+}
+#cooldown-prog {
+  display:block; width:160px; height:7px; margin:5px auto 0;
+  appearance:none; background:#222; border-radius:4px; border:none; overflow:hidden;
+}
+#cooldown-prog::-webkit-progress-bar   { background:#222; border-radius:4px; }
+#cooldown-prog::-webkit-progress-value { background:linear-gradient(90deg,var(--pink),var(--cyan)); }
+
+/* ── Cockpit cameras ── */
+.cockpit { position:fixed; bottom:0; display:none; flex-direction:column; align-items:center; z-index:15; }
+.cockpit.visible { display:flex; }
+#cockpit-you { left:0; }
+#cockpit-partner { right:0; }
+.cockpit-label { font-size:11px; font-weight:900; letter-spacing:2px; padding:3px 12px; border-radius:6px 6px 0 0; }
+#cockpit-you .cockpit-label     { background:rgba(255,0,255,.25); color:var(--pink); border:1px solid var(--pink); border-bottom:none; }
+#cockpit-partner .cockpit-label { background:rgba(0,255,255,.25); color:var(--cyan); border:1px solid var(--cyan); border-bottom:none; }
+.cockpit-frame {
+  width:172px; height:130px; position:relative; overflow:hidden;
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);
+}
+#cockpit-you .cockpit-frame     { border:2px solid var(--pink); box-shadow:0 0 22px rgba(255,0,255,.35); }
+#cockpit-partner .cockpit-frame { border:2px solid var(--cyan); box-shadow:0 0 22px rgba(0,255,255,.35); }
+.cockpit-frame video { width:100%; height:100%; object-fit:cover; background:#0a0018; }
+.cockpit-frame::after {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:2;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.12) 3px,rgba(0,0,0,.12) 4px);
+}
+
+/* ── Wave / Boss announce ── */
+#wave-announce {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:72px; font-weight:900; color:var(--pink);
+  text-shadow:0 0 40px #ff00ff,0 0 80px #ff00ff66;
+  pointer-events:none; z-index:25; opacity:0; transition:opacity .35s; white-space:nowrap;
+}
+#wave-announce.show { opacity:1; }
+
+/* ── Common UI ── */
+.title {
+  font-size:64px; font-weight:900; text-align:center;
+  background:linear-gradient(135deg,var(--pink) 0%,#cc88ff 50%,var(--cyan) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.1;
+}
+.subtitle { font-size:22px; color:#cc88ff; text-align:center; margin-top:-12px; }
+.btn {
+  min-height:72px; padding:0 44px; font-size:26px; font-weight:800;
+  border:none; border-radius:18px; cursor:pointer;
+  transition:transform .1s,box-shadow .1s; letter-spacing:1px;
+}
+.btn:hover  { transform:scale(1.05); }
+.btn:active { transform:scale(.97); }
+.btn-pink { background:linear-gradient(135deg,#e040fb,#ab00d6); color:#fff; box-shadow:0 0 24px #e040fb55; }
+.btn-cyan { background:linear-gradient(135deg,#00bcd4,#0097a7); color:#fff; box-shadow:0 0 24px #00bcd455; }
+.btn-gold { background:linear-gradient(135deg,#ffd700,#ff8f00); color:#2a0050; box-shadow:0 0 24px #ffd70055; }
+.btn-gray { background:#333; color:#aaa; }
+.btn-sm   { min-height:52px; font-size:20px; padding:0 28px; }
+.divider  { color:#664488; font-size:22px; }
+input.room-input {
+  font-size:48px; font-weight:900; text-align:center; letter-spacing:12px;
+  width:220px; padding:10px 16px; border:4px solid var(--pink); border-radius:16px;
+  background:rgba(255,128,255,.08); color:var(--pink); outline:none; caret-color:var(--pink); direction:ltr;
+}
+input.room-input::placeholder { color:#884488; letter-spacing:4px; font-size:28px; }
+input.room-input:focus { border-color:var(--cyan); color:var(--cyan); }
+.status-msg { font-size:20px; color:#cc88ff; text-align:center; min-height:28px; }
+.error-msg  { font-size:20px; color:var(--red); text-align:center; min-height:28px; }
+#lobby-cam-preview { width:180px; height:135px; border:3px solid var(--pink); border-radius:12px; background:#111; object-fit:cover; }
+
+/* ── Role cards ── */
+.role-card {
+  width:200px; padding:24px 16px; border:3px solid #664488; border-radius:20px;
+  text-align:center; cursor:pointer; background:rgba(255,128,255,.06);
+  transition:border-color .2s,background .2s,transform .1s;
+}
+.role-card:hover  { border-color:var(--pink); background:rgba(255,128,255,.14); transform:scale(1.03); }
+.role-card.chosen { border-color:var(--cyan);  background:rgba(128,255,255,.14); }
+.role-icon { font-size:52px; }
+.role-name { font-size:22px; font-weight:900; margin-top:8px; color:var(--pink); }
+.role-desc { font-size:14px; color:#cc99ff; margin-top:6px; line-height:1.4; }
+.roles-row { display:flex; gap:24px; }
+.role-note { font-size:16px; color:#cc88ff; text-align:center; max-width:440px; line-height:1.5; }
+
+/* ── Hangar ── */
+.hangar-title    { font-size:42px; font-weight:900; color:var(--gold); }
+.crystal-balance { font-size:28px; color:var(--gold); }
+.weapon-card { width:200px; padding:20px 16px; border:3px solid #664488; border-radius:18px; text-align:center; background:rgba(255,215,0,.05); }
+.weapon-card.owned { border-color:var(--gold); background:rgba(255,215,0,.1); }
+.weapon-name { font-size:20px; font-weight:900; color:var(--white); margin-bottom:6px; }
+.weapon-desc { font-size:13px; color:#cc99ff; line-height:1.4; margin-bottom:12px; }
+.weapon-cost { font-size:18px; color:var(--gold); margin-bottom:10px; }
+
+/* ── Game Over ── */
+.score-big   { font-size:52px; font-weight:900; color:var(--gold); }
+.score-label { font-size:20px; color:#cc88ff; margin-top:-8px; }
+.go-row      { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+.go-extra    { font-size:22px; color:var(--cyan); text-align:center; font-weight:700; }
+
+/* ── World Selection ── */
+#world-grid { display:flex; gap:18px; flex-wrap:wrap; justify-content:center; max-width:860px; }
+.world-card {
+  width:145px; padding:22px 12px; border:3px solid #664488; border-radius:22px;
+  text-align:center; cursor:pointer; background:rgba(255,128,255,.05);
+  transition:border-color .2s,transform .12s,background .2s;
+  position:relative;
+}
+.world-card:not(.locked):hover { border-color:var(--gold); background:rgba(255,215,0,.1); transform:scale(1.06); }
+.world-card.locked { filter:grayscale(.85) brightness(.6); cursor:default; pointer-events:none; }
+.world-card.cleared { border-color:var(--green) !important; background:rgba(68,255,136,.08) !important; }
+.world-icon  { font-size:48px; }
+.world-num   { font-size:12px; color:#aa88cc; margin-top:6px; letter-spacing:1px; }
+.world-name  { font-size:14px; font-weight:800; color:var(--white); margin-top:4px; line-height:1.3; min-height:36px; }
+.world-state { font-size:13px; margin-top:8px; }
+.world-lock  { position:absolute; top:8px; right:10px; font-size:18px; }
+
+/* ── Connection status ── */
+#conn-status {
+  position:fixed; top:8px; right:16px; font-size:13px; padding:4px 14px; border-radius:20px;
+  background:rgba(0,0,0,.75); z-index:100; display:none;
+}
+
+/* ── Mode selector cards ── */
+.mode-cards { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
+.mode-card {
+  width:240px; padding:36px 20px; border-radius:28px; cursor:pointer; text-align:center;
+  border:3px solid #664488; background:rgba(255,128,255,.06);
+  transition:transform .12s,border-color .18s,background .18s,box-shadow .18s;
+}
+.mode-card:hover { transform:scale(1.06); }
+.mode-card.single  { border-color:#e040fb; }
+.mode-card.single:hover { background:rgba(224,64,251,.14); box-shadow:0 0 32px #e040fb44; }
+.mode-card.coop    { border-color:#00bcd4; }
+.mode-card.coop:hover   { background:rgba(0,188,212,.14); box-shadow:0 0 32px #00bcd444; }
+.mode-card-icon { font-size:64px; }
+.mode-card-name { font-size:28px; font-weight:900; margin-top:12px; }
+.mode-card.single .mode-card-name { color:#f080ff; }
+.mode-card.coop   .mode-card-name { color:#80ffff; }
+.mode-card-desc { font-size:14px; color:#cc99ff; margin-top:8px; line-height:1.5; }
+
+/* ── Coop panel (shown after mode choice) ── */
+#coop-panel { display:none; flex-direction:column; align-items:center; gap:16px; }
+#coop-panel.visible { display:flex; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- ══ לובי ══ -->
+<div id="screen-lobby" class="screen active">
+  <div class="title">🚀 מסע הגלקסיה</div>
+  <div class="subtitle">יורה חלל — בחר מצב משחק</div>
+
+  <!-- Mode selector (shown first) -->
+  <div id="mode-selector" class="mode-cards">
+    <div class="mode-card single" id="btn-mode-single">
+      <div class="mode-card-icon">🚀</div>
+      <div class="mode-card-name">משחק יחיד</div>
+      <div class="mode-card-desc">שחק לבד<br>שליטה מלאה בספינה<br>כל העולמות זמינים</div>
+    </div>
+    <div class="mode-card coop" id="btn-mode-coop">
+      <div class="mode-card-icon">👥</div>
+      <div class="mode-card-name">משחק משותף</div>
+      <div class="mode-card-desc">שחק עם שותף<br>תפקיד נווט ויורה<br>מצלמה חיה</div>
+    </div>
+  </div>
+
+  <!-- Co-op connection panel (hidden until coop chosen) -->
+  <div id="coop-panel">
+    <video id="lobby-cam-preview" autoplay muted playsinline style="width:140px;height:105px;border:3px solid var(--pink);border-radius:12px;background:#111;object-fit:cover;"></video>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn btn-pink" id="btn-create">✨ צור חדר</button>
+      <button class="btn btn-cyan" id="btn-join-go">🚀 הצטרף</button>
+    </div>
+    <input class="room-input" id="join-input" type="text" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+    <div id="room-display" style="font-size:44px;font-weight:900;color:var(--gold);letter-spacing:14px;display:none;direction:ltr;"></div>
+    <div id="lobby-status" class="status-msg"></div>
+    <div id="lobby-error"  class="error-msg"></div>
+    <button class="btn btn-gray btn-sm" id="btn-back-mode" style="margin-top:4px;">← חזרה</button>
+  </div>
+</div>
+
+<!-- ══ מפת הגלקסיה ══ -->
+<div id="screen-worlds" class="screen">
+  <div class="title" style="font-size:42px;">🗺️ מפת הגלקסיה</div>
+  <div class="subtitle" id="worlds-subtitle">בחר עולם להתמודד</div>
+  <div id="world-grid"></div>
+  <div style="display:flex;gap:14px;margin-top:4px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-gold btn-sm" id="btn-worlds-hangar">🏪 מחסן</button>
+    <button class="btn btn-gray btn-sm" id="btn-worlds-back">← לובי</button>
+  </div>
+  <div id="worlds-status" class="status-msg"></div>
+</div>
+
+<!-- ══ בחירת תפקיד ══ -->
+<div id="screen-role" class="screen">
+  <div class="title" style="font-size:38px;" id="role-world-label">עולם 1: ערפילית הממתקים</div>
+  <div class="roles-row">
+    <div class="role-card" id="role-nav">
+      <div class="role-icon">🚀</div>
+      <div class="role-name">נווט</div>
+      <div class="role-desc">חצי כיוון / WASD<br>נהג את הספינה בשדה הקרב</div>
+    </div>
+    <div class="role-card" id="role-shoot">
+      <div class="role-icon">⚡</div>
+      <div class="role-name">יורה</div>
+      <div class="role-desc">רווח — ירי<br>Z — פצצה מגה</div>
+    </div>
+  </div>
+  <div class="role-note" id="role-note">המארח בוחר תפקיד — השותף מקבל את ההפך.</div>
+  <div style="display:flex;gap:14px;">
+    <button class="btn btn-gold" id="btn-hangar-from-role">🏪 מחסן</button>
+    <button class="btn btn-pink" id="btn-start-game" disabled>🎮 המראה!</button>
+  </div>
+  <div id="role-status" class="status-msg"></div>
+</div>
+
+<!-- ══ מחסן ══ -->
+<div id="screen-hangar" class="screen">
+  <div class="hangar-title">🏪 מחסן</div>
+  <div class="crystal-balance" id="hangar-balance">💎 0 יהלומים</div>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;">
+    <div class="weapon-card owned" id="card-basic">
+      <div class="weapon-name">לייזר בסיסי</div>
+      <div class="weapon-desc">תחמושת בלתי מוגבלת.<br>קרן פלזמה ציאנית.</div>
+      <div class="weapon-cost">✅ בבעלותך</div>
+      <button class="btn btn-gray btn-sm" disabled>מצויד</button>
+    </div>
+    <div class="weapon-card" id="card-double">
+      <div class="weapon-name">לייזר כפול</div>
+      <div class="weapon-desc">שתי קרניים בו זמנית!<br>10 ירויות ← טעינה 2 שניות.</div>
+      <div class="weapon-cost" id="double-cost">💎 100 יהלומים</div>
+      <button class="btn btn-gold btn-sm" id="btn-buy-double">קנה</button>
+    </div>
+  </div>
+  <div id="hangar-msg" class="status-msg"></div>
+  <button class="btn btn-pink" id="btn-hangar-back">← חזרה</button>
+</div>
+
+<!-- ══ סוף משחק ══ -->
+<div id="screen-gameover" class="screen">
+  <div class="title" style="font-size:42px;" id="go-title">המשימה הושלמה!</div>
+  <div class="go-extra" id="go-extra"></div>
+  <div class="score-big" id="go-score">0</div>
+  <div class="score-label">ניקוד</div>
+  <div style="font-size:24px;color:var(--gold);" id="go-crystals">+0 💎 יהלומים נצברו</div>
+  <div class="go-row">
+    <button class="btn btn-pink" id="btn-play-again">🔄 שחק שוב</button>
+    <button class="btn btn-gold" id="btn-go-hangar">🏪 מחסן</button>
+  </div>
+</div>
+
+<!-- ══ TOP HUD ══ -->
+<div id="hud">
+  <div class="hud-group hud-left">
+    <div class="hud-pill role"><span class="lbl">תפקיד</span><span class="val" id="hud-role-val">נווט</span></div>
+    <div class="hud-pill crystals"><span class="lbl">💎</span><span class="val" id="hud-crystals-val">0</span></div>
+    <div class="hud-pill weapon"><span class="lbl">נשק</span><span class="val" id="hud-weapon-val">לייזר בסיסי</span></div>
+    <div class="hud-pill bomb"><span class="lbl">פצצות</span><span class="val" id="hud-bombs-val">💣 0</span></div>
+  </div>
+  <div class="hud-mid">
+    <div class="hud-pill wave"><span class="val" id="hud-wave-val">גל 1 / 5</span></div>
+  </div>
+  <div class="hud-right">
+    <div class="hud-pill hp"><span class="lbl">חיים</span><span class="val" id="hud-hp-val">♥♥♥</span></div>
+  </div>
+</div>
+
+<!-- ══ COOLDOWN TOAST ══ -->
+<div id="cooldown-toast">⚡ טוען...<progress id="cooldown-prog" max="100" value="0"></progress></div>
+
+<!-- ══ COCKPIT CAMERAS ══ -->
+<div class="cockpit" id="cockpit-you">
+  <div class="cockpit-label">אתה</div>
+  <div class="cockpit-frame"><video id="local-cam" autoplay muted playsinline></video></div>
+</div>
+<div class="cockpit" id="cockpit-partner">
+  <div class="cockpit-label">שותף</div>
+  <div class="cockpit-frame"><video id="remote-cam" autoplay playsinline></video></div>
+</div>
+<div id="wave-announce"></div>
+<div id="conn-status"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════
+   SECTION 2: CONSTANTS & DIMENSIONS
+   ═══════════════════════════════════════ */
+let LW = window.innerWidth, LH = window.innerHeight;
+
+const EMA_FACTOR        = 0.15;
+const FIRE_DEBOUNCE_MS  = 350;
+const BURST_LIMIT       = 10;
+const BURST_COOLDOWN_MS = 2000;
+const WAVE_ANNOUNCE_MS  = 800;
+const WAVE_CLEAR_PAUSE  = 300;
+const TOTAL_WAVES       = 5;
+const SYNC_RATE_MS      = 33;
+
+const D = {
+  shipH:     () => LH*.088,
+  shipW:     () => LH*.054,
+  scrollSpd: () => 2.5*(LH/720),
+  maxSpeed:  () => LH*.0072,
+  margin:    () => LW*.035,
+  enemyR:    t => {
+    if (t==='boss') return LH*.042*3.8;
+    return LH*({jet_basic:.042,jet_heavy:.054,jet_fast:.034}[t]||.042);
+  },
+  bulletH:  () => LH*.046,
+  bulletSpd:() => LH*.021,
+  crystalR: () => LH*.017,
+  partSpd:  () => LH*.004,
+};
+
+// ── World metadata ──
+const WORLDS_META = [
+  { name:'ערפילית הממתקים', icon:'🌸', palette:{ bg1:'#03000c',bg2:'#200045',nh:285,sc:'255,240,255' }},
+  { name:'מגזר הקרח',       icon:'❄️', palette:{ bg1:'#000a1a',bg2:'#002060',nh:210,sc:'180,220,255' }},
+  { name:'ליבת הלבה',       icon:'🌋', palette:{ bg1:'#0e0000',bg2:'#3a0800',nh:18, sc:'255,200,140' }},
+  { name:'יער האזמרגד',     icon:'🌿', palette:{ bg1:'#000a02',bg2:'#003820',nh:135,sc:'160,255,160' }},
+  { name:'תהום הריק',       icon:'⭐', palette:{ bg1:'#000000',bg2:'#080600',nh:50, sc:'255,240,150' }},
+];
+
+const BOSS_STATS = [
+  { hp:15, label:'מפקד הממתקים'  },
+  { hp:22, label:'קרחון הקרח'    },
+  { hp:30, label:'ענק הלבה'      },
+  { hp:38, label:'שומר היער'     },
+  { hp:48, label:'שליט הריק'     },
+];
+
+const BOSS_PALETTES = [
+  { hull:'#8833cc', wing:'#5511aa', cockpit:'#ffaaff', exhaust:'#ff00ff', glow:'#ff44ff' },
+  { hull:'#2244aa', wing:'#112266', cockpit:'#aaddff', exhaust:'#88ccff', glow:'#44ccff' },
+  { hull:'#882200', wing:'#551100', cockpit:'#ffaa44', exhaust:'#ff4400', glow:'#ff6600' },
+  { hull:'#225533', wing:'#112211', cockpit:'#88ff88', exhaust:'#44ff44', glow:'#44ff88' },
+  { hull:'#332200', wing:'#221100', cockpit:'#ffd700', exhaust:'#ffaa00', glow:'#ffd700' },
+];
+
+// Per-world jet color palettes [type][world]
+const JET_WORLD_PALETTES = [
+  // World 0 Candy
+  { jet_basic:{hull:'#3a4a6e',wing:'#252f55',cockpit:'#88aaee',exhaust:'#ff7700',accent:'#6688cc',stripe:'#cc3333'},
+    jet_heavy:{hull:'#5a2222',wing:'#3a1010',cockpit:'#ffaa44',exhaust:'#ff3300',accent:'#cc5533',stripe:'#ff2200'},
+    jet_fast: {hull:'#1e4848',wing:'#0e3232',cockpit:'#44ffdd',exhaust:'#00ffaa',accent:'#33ccaa',stripe:'#00ffcc'} },
+  // World 1 Ice
+  { jet_basic:{hull:'#2a4a66',wing:'#1a2a44',cockpit:'#cceeFF',exhaust:'#88ccff',accent:'#55aacc',stripe:'#4488cc'},
+    jet_heavy:{hull:'#334466',wing:'#223355',cockpit:'#ffffff',exhaust:'#aaccff',accent:'#7799bb',stripe:'#5577aa'},
+    jet_fast: {hull:'#1a3a55',wing:'#0a2240',cockpit:'#ddeeff',exhaust:'#66ddff',accent:'#44aacc',stripe:'#2266aa'} },
+  // World 2 Lava
+  { jet_basic:{hull:'#663322',wing:'#441a0a',cockpit:'#ffaa44',exhaust:'#ff4400',accent:'#cc5522',stripe:'#ff2200'},
+    jet_heavy:{hull:'#882200',wing:'#551100',cockpit:'#ffcc44',exhaust:'#ff2200',accent:'#dd4400',stripe:'#ff0000'},
+    jet_fast: {hull:'#774422',wing:'#552200',cockpit:'#ffdd88',exhaust:'#ff8800',accent:'#ff6622',stripe:'#ff4400'} },
+  // World 3 Forest
+  { jet_basic:{hull:'#225533',wing:'#113322',cockpit:'#88ff88',exhaust:'#44ff44',accent:'#33cc66',stripe:'#00ff44'},
+    jet_heavy:{hull:'#335522',wing:'#224411',cockpit:'#aaff66',exhaust:'#66ff22',accent:'#55cc33',stripe:'#33cc00'},
+    jet_fast: {hull:'#1a4422',wing:'#0a2211',cockpit:'#ccff88',exhaust:'#88ff44',accent:'#66dd44',stripe:'#44ff22'} },
+  // World 4 Void
+  { jet_basic:{hull:'#1a1600',wing:'#0a0c00',cockpit:'#ffd700',exhaust:'#ffaa00',accent:'#cc9900',stripe:'#ffcc00'},
+    jet_heavy:{hull:'#2a2000',wing:'#181200',cockpit:'#ffe844',exhaust:'#ffbb00',accent:'#dd9900',stripe:'#ffdd00'},
+    jet_fast: {hull:'#151000',wing:'#0a0800',cockpit:'#fff088',exhaust:'#ffcc44',accent:'#ddaa44',stripe:'#ffee66'} },
+];
+
+// World-specific wave definitions (5 waves each, wave 5 = boss)
+const WORLD_WAVE_DEFS = [
+  // World 0: Candy Nebula
+  [
+    [{type:'jet_basic', count:5, form:'line'}],
+    [{type:'jet_basic', count:6, form:'v'}, {type:'jet_fast', count:3, form:'sides'}],
+    [{type:'jet_heavy', count:3, form:'line'}, {type:'jet_basic', count:5, form:'v'}],
+    [{type:'jet_fast',  count:7, form:'circle'}, {type:'jet_heavy', count:2, form:'sides'}],
+    [{type:'boss',      count:1, form:'center'}],
+  ],
+  // World 1: Ice Sector
+  [
+    [{type:'jet_fast',  count:6, form:'line'}],
+    [{type:'jet_fast',  count:8, form:'v'}],
+    [{type:'jet_basic', count:6, form:'circle'}, {type:'jet_fast', count:4, form:'sides'}],
+    [{type:'jet_fast',  count:9, form:'v'},  {type:'jet_basic', count:5, form:'line'}],
+    [{type:'boss',      count:1, form:'center'}],
+  ],
+  // World 2: Lava Core
+  [
+    [{type:'jet_heavy', count:3, form:'line'}],
+    [{type:'jet_heavy', count:4, form:'v'}],
+    [{type:'jet_heavy', count:5, form:'line'}, {type:'jet_basic', count:4, form:'sides'}],
+    [{type:'jet_heavy', count:6, form:'circle'}, {type:'jet_fast', count:3, form:'sides'}],
+    [{type:'boss',      count:1, form:'center'}],
+  ],
+  // World 3: Emerald Forest
+  [
+    [{type:'jet_fast',  count:7, form:'v'}],
+    [{type:'jet_basic', count:7, form:'line'}, {type:'jet_fast', count:4, form:'sides'}],
+    [{type:'jet_fast',  count:9, form:'circle'}],
+    [{type:'jet_basic', count:8, form:'v'}, {type:'jet_heavy', count:3, form:'sides'}],
+    [{type:'boss',      count:1, form:'center'}],
+  ],
+  // World 4: Void Abyss
+  [
+    [{type:'jet_heavy', count:5, form:'v'}],
+    [{type:'jet_heavy', count:5, form:'line'}, {type:'jet_fast', count:5, form:'sides'}],
+    [{type:'jet_fast',  count:8, form:'circle'}, {type:'jet_heavy', count:4, form:'v'}],
+    [{type:'jet_heavy', count:7, form:'line'},   {type:'jet_fast',  count:6, form:'circle'}],
+    [{type:'boss',      count:1, form:'center'}],
+  ],
+];
+const WAVE_FRACS = [0.05, 0.2, 0.4, 0.6, 0.8];
+
+const ENEMY_DEFS = {
+  jet_basic:{ hp:1,drop:1,spd:1.0, col:'#4466cc',baseFireInterval:4200 },
+  jet_heavy:{ hp:3,drop:2,spd:.6,  col:'#cc4422',baseFireInterval:2600 },
+  jet_fast: { hp:1,drop:1,spd:1.8, col:'#22ccaa',baseFireInterval:5500 },
+};
+
+const WEAPONS = {
+  basicLaser:  { name:'Basic Laser',  namehe:'לייזר בסיסי',  cost:0,   debounceMs:FIRE_DEBOUNCE_MS, burstLimit:Infinity,   burstCooldownMs:0,              getOffsets:()=>[[0,0]],                       bulletColor:'#00ffff' },
+  doubleLaser: { name:'Double Laser', namehe:'לייזר כפול', cost:100, debounceMs:FIRE_DEBOUNCE_MS, burstLimit:BURST_LIMIT, burstCooldownMs:BURST_COOLDOWN_MS, getOffsets:()=>[[-LH*.028,0],[LH*.028,0]], bulletColor:'#ff80ff' },
+};
+
+const LS = { crystals:'cn_crystals', weapons:'cn_weapons', levels:'cn_levels', worlds:'cn_worlds' };
+
+/* ═══════════════════════════════════════
+   SECTION 3: GAME STATE
+   ═══════════════════════════════════════ */
+let appState='lobby', isHost=false, localRole=null, selectedWorld=0;
+let gameMode='single'; // 'single' | 'coop'
+let peer=null, dataConn=null, localStream=null;
+let ship, enemies, bullets, crystals, particles, enemyBullets, powerUps, bombBlasts;
+let score, sessionCrystals, bgScrollY, nextId;
+const WP={SCROLL:'scroll',INCOMING:'incoming',ACTIVE:'active',CLEARED:'cleared'};
+let wavePhase, currentWave, waveTimer;
+const keys={};
+let smoothVx=0, smoothVy=0, remoteState=null;
+let canvas, ctx, dpr=1;
+let stars=[], nebulas=[];
+let animFrame=null, syncInterval=null;
+let cdAnimStart=0, cdAnimDur=0;
+let activeWeapon='basicLaser', guestKeys={};
+
+/* ═══════════════════════════════════════
+   SECTION 11: PERSISTENCE
+   ═══════════════════════════════════════ */
+function loadCrystals()      { return parseInt(localStorage.getItem(LS.crystals)||'0'); }
+function saveCrystals(n)     { localStorage.setItem(LS.crystals,String(Math.max(0,n))); }
+function loadWeapons()       { try{return JSON.parse(localStorage.getItem(LS.weapons)||'["basicLaser"]');}catch(e){return['basicLaser'];} }
+function saveWeapons(a)      { localStorage.setItem(LS.weapons,JSON.stringify(a)); }
+function hasWeapon(id)       { return loadWeapons().includes(id); }
+function unlockWeapon(id)    { const w=loadWeapons(); if(!w.includes(id)){w.push(id);saveWeapons(w);} }
+function loadLevels()        { try{return JSON.parse(localStorage.getItem(LS.levels)||'[]');}catch(e){return[];} }
+function saveLevel(n)        { const l=loadLevels(); if(!l.includes(n)){l.push(n);localStorage.setItem(LS.levels,JSON.stringify(l));} }
+function loadWorldsUnlocked(){ try{const a=JSON.parse(localStorage.getItem(LS.worlds)||'[0]');if(!a.includes(0))a.push(0);return a;}catch(e){return[0];} }
+function saveWorldsUnlocked(a){ localStorage.setItem(LS.worlds,JSON.stringify(a)); }
+function isWorldUnlocked(i)  { return loadWorldsUnlocked().includes(i); }
+function isWorldCleared(i)   { return loadLevels().includes(i); }
+function unlockNextWorld()   { const ul=loadWorldsUnlocked(); if(selectedWorld+1<5&&!ul.includes(selectedWorld+1)){ul.push(selectedWorld+1);saveWorldsUnlocked(ul);} }
+
+/* ═══════════════════════════════════════
+   SECTION 4: NETWORKING
+   ═══════════════════════════════════════ */
+async function initMedia() {
+  if(gameMode!=='coop') return;
+  try {
+    localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    document.getElementById('lobby-cam-preview').srcObject=localStream;
+    document.getElementById('local-cam').srcObject=localStream;
+  } catch(e){console.warn('Camera unavailable');}
+}
+
+function startSinglePlayer() {
+  gameMode='single';
+  isHost=true;
+  localRole='navigator'; // single: has both roles
+  renderWorldsScreen();
+  showScreen('worlds');
+}
+
+function createRoom() {
+  const code=String(Math.floor(1000+Math.random()*9000));
+  isHost=true;
+  setLobbyStatus('קוד החדר שלך:');
+  const rd=document.getElementById('room-display');
+  rd.textContent=code; rd.style.display='block';
+  peer=new Peer('candynebula-'+code,{debug:0});
+  peer.on('open',()=>{setLobbyStatus('ממתין לשותף...');showConn('⏳ ממתין…','#ffaa44');});
+  peer.on('connection',c=>{dataConn=c;setupConn(c);});
+  peer.on('call',c=>{c.answer(localStream||undefined);c.on('stream',s=>{document.getElementById('remote-cam').srcObject=s;});});
+  peer.on('error',e=>setLobbyError('שגיאה: '+e.type));
+}
+
+function joinRoom(code) {
+  isHost=false;
+  peer=new Peer({debug:0});
+  peer.on('open',()=>{
+    setLobbyStatus('מתחבר...');
+    const c=peer.connect('candynebula-'+code,{reliable:true});
+    dataConn=c; setupConn(c);
+    if(localStream){const call=peer.call('candynebula-'+code,localStream);call.on('stream',s=>{document.getElementById('remote-cam').srcObject=s;});}
+  });
+  peer.on('error',()=>setLobbyError('לא ניתן להתחבר — בדוק את הקוד.'));
+}
+
+function setupConn(c) {
+  c.on('open',()=>{
+    showConn('🟢 מחובר','#44ff88');
+    setLobbyStatus('מחובר!');
+    setTimeout(()=>{ renderWorldsScreen(); showScreen('worlds'); },700);
+  });
+  c.on('data',msg=>handleMsg(msg));
+  c.on('close',()=>showConn('🔴 מנותק','#ff4444'));
+}
+
+function send(obj){ if(dataConn&&dataConn.open)try{dataConn.send(obj);}catch(e){} }
+
+function handleMsg(msg) {
+  switch(msg.type) {
+    case 'worldChosen':
+      selectedWorld=msg.world;
+      updateRoleWorldLabel();
+      showScreen('role');
+      break;
+    case 'roleAssign':
+      localRole=msg.guestRole;
+      applyRoles(msg.hostRole,msg.guestRole);
+      break;
+    case 'hangarSync':
+      saveCrystals(msg.crystals); saveWeapons(msg.weapons); refreshHangar();
+      break;
+    case 'startGame':
+      localRole=msg.guestRole;
+      activeWeapon=msg.weapon||'basicLaser';
+      selectedWorld=msg.world||0;
+      startGameScreen();
+      break;
+    case 'state':
+      if(!isHost) remoteState=msg.gs;
+      break;
+    case 'input':
+      if(isHost){
+        if(msg.key==='fire'&&msg.down) tryFire(performance.now());
+        else if(msg.key==='bomb'&&msg.down) triggerBomb(performance.now());
+        else guestKeys[msg.key]=msg.down;
+      }
+      break;
+    case 'gameOver':
+      if(!isHost){sessionCrystals=msg.crystals;score=msg.score;endGame(msg.survived);}
+      break;
+  }
+}
+
+function startSyncLoop() {
+  if(syncInterval) clearInterval(syncInterval);
+  syncInterval=setInterval(()=>{
+    if(isHost&&dataConn&&dataConn.open&&appState==='game') send({type:'state',gs:buildSnap()});
+  },SYNC_RATE_MS);
+}
+
+function buildSnap() {
+  return {
+    ship: ship?{nx:ship.x/LW,ny:ship.y/LH,hp:ship.hp,weapon:ship.weapon,
+                shotsFired:ship.shotsFired,cooldownUntil:ship.cooldownUntil,bombs:ship.bombs||0}:null,
+    enemies:     enemies.map(e=>({id:e.id,nx:e.x/LW,ny:e.y/LH,hp:e.hp,maxHp:e.maxHp,type:e.type,mp:e.mp,fi:e.fi,isBoss:e.isBoss,world:e.world})),
+    bullets:     bullets.map(b=>({id:b.id,nx:b.x/LW,ny:b.y/LH,color:b.color})),
+    crystals:    crystals.map(c=>({id:c.id,nx:c.x/LW,ny:c.y/LH,collected:c.collected,hue:c.hue,spin:c.spin})),
+    parts:       particles.slice(0,24).map(p=>({nx:p.x/LW,ny:p.y/LH,rn:p.r/LH,alpha:p.alpha,color:p.color})),
+    enemyBullets:enemyBullets.map(b=>({id:b.id,nx:b.x/LW,ny:b.y/LH})),
+    powerUps:    powerUps.map(p=>({id:p.id,nx:p.x/LW,ny:p.y/LH,collected:p.collected,spin:p.spin})),
+    bombBlasts:  bombBlasts.map(b=>({nx:b.x/LW,ny:b.y/LH,rn:b.r/LH,maxRn:b.maxR/LH,alpha:b.alpha})),
+    score,wavePhase,currentWave,bgN:bgScrollY/LH,selectedWorld,
+  };
+}
+
+/* ═══════════════════════════════════════
+   SECTION 5: INPUT PIPELINE
+   ═══════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(appState!=='game') return;
+  keys[e.key]=true;
+  if(e.key===' '||e.code==='Space'){
+    e.preventDefault();
+    // single: always fire; coop: only if shooter role
+    if(gameMode==='single'||isShooter()){
+      if(isHost) tryFire(performance.now());
+      else send({type:'input',key:'fire',down:true});
+    }
+  }
+  if(e.key==='z'||e.key==='Z'){
+    e.preventDefault();
+    if(gameMode==='single'||isShooter()){
+      if(isHost) triggerBomb(performance.now());
+      else send({type:'input',key:'bomb',down:true});
+    }
+  }
+  // coop guest navigator: relay movement keys
+  if(gameMode==='coop'&&!isHost&&isNav()){
+    const nk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
+    if(nk.includes(e.key)) send({type:'input',key:e.key,down:true});
+  }
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup',e=>{
+  if(appState!=='game') return;
+  keys[e.key]=false;
+  if(gameMode==='coop'&&!isHost&&isNav()){
+    const nk=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'];
+    if(nk.includes(e.key)) send({type:'input',key:e.key,down:false});
+  }
+});
+function isNav()     { return gameMode==='single'||localRole==='navigator'; }
+function isShooter() { return gameMode==='single'||localRole==='shooter';   }
+function navKeys()   {
+  // single: local keyboard always drives ship
+  if(gameMode==='single') return keys;
+  if(isHost&&localRole==='navigator') return keys;
+  if(isHost&&localRole==='shooter')   return guestKeys;
+  return {};
+}
+function updateShip() {
+  if(!ship) return;
+  const n=navKeys(), spd=D.maxSpeed();
+  const rx=((n.ArrowRight||n.d||n.D)?1:0)-((n.ArrowLeft||n.a||n.A)?1:0);
+  const ry=((n.ArrowDown||n.s||n.S)?1:0)-((n.ArrowUp||n.w||n.W)?1:0);
+  smoothVx=smoothVx*(1-EMA_FACTOR)+rx*spd*EMA_FACTOR;
+  smoothVy=smoothVy*(1-EMA_FACTOR)+ry*spd*EMA_FACTOR;
+  const mg=D.margin();
+  ship.x=Math.max(mg,Math.min(LW-mg,ship.x+smoothVx));
+  ship.y=Math.max(70+mg,Math.min(LH-mg,ship.y+smoothVy));
+}
+
+/* ═══════════════════════════════════════
+   SECTION 6: ENTITY FACTORIES
+   ═══════════════════════════════════════ */
+function mkShip() {
+  return {x:LW/2,y:LH*.82,w:D.shipW()*2,h:D.shipH()*2,
+          hp:3,maxHp:3,weapon:activeWeapon,bombs:0,
+          shotsFired:0,cooldownUntil:0,lastFireTime:0,invUntil:0};
+}
+function mkEnemy(type,x,y,fi) {
+  const def=ENEMY_DEFS[type], r=D.enemyR(type);
+  return {id:nextId++,type,x,y,r,w:r*3,h:r*3,
+          hp:def.hp,maxHp:def.hp,spd:LH*.002*def.spd,drop:def.drop,
+          col:def.col,fi,mp:Math.random()*Math.PI*2,nextFireTime:0,isBoss:false};
+}
+function mkBoss(world) {
+  const stats=BOSS_STATS[world], r=D.enemyR('boss');
+  return {id:nextId++,type:'boss',world,x:LW/2,y:-r*2.5,r,w:r*3.5,h:r*3.5,
+          hp:stats.hp,maxHp:stats.hp,spd:LH*.0007,drop:8,isBoss:true,
+          mp:0,fi:0,nextFireTime:0,col:'#ffd700'};
+}
+function mkBullet(x,y,color) { return {id:nextId++,x,y,w:7,h:D.bulletH(),speedY:-D.bulletSpd(),color}; }
+function mkCrystal(x,y) {
+  return {id:nextId++,x,y,r:D.crystalR(),w:D.crystalR()*2.5,h:D.crystalR()*2.5,
+          speedY:LH*.0017,collected:false,hue:280+Math.random()*50,spin:0,ss:(Math.random()-.5)*.07};
+}
+function mkPowerUp(x,y) {
+  const r=D.crystalR()*2.6;
+  return {id:nextId++,type:'bomb',x,y,r,w:r*2,h:r*2,speedY:LH*.0013,collected:false,spin:0,ss:(Math.random()-.5)*.032};
+}
+function mkEnemyBullet(x,y,vx,vy) { return {id:nextId++,x,y,vx,vy,r:9,w:18,h:18}; }
+function mkParticle(x,y,color) {
+  const a=Math.random()*Math.PI*2, s=D.partSpd()*(.5+Math.random());
+  return {x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:LH*(.003+Math.random()*.005),alpha:1,color};
+}
+function burst(x,y,col,n){ for(let i=0;i<(n||12);i++) particles.push(mkParticle(x,y,col)); }
+
+function tryFire(now) {
+  if(!ship) return;
+  const w=WEAPONS[ship.weapon];
+  if(now-ship.lastFireTime<w.debounceMs) return;
+  if(ship.cooldownUntil>now) return;
+  w.getOffsets().forEach(([dx])=>bullets.push(mkBullet(ship.x+dx,ship.y-D.shipH()*.45,w.bulletColor)));
+  ship.lastFireTime=now;
+  if(w.burstLimit!==Infinity){
+    if(++ship.shotsFired>=w.burstLimit){
+      ship.cooldownUntil=now+w.burstCooldownMs; ship.shotsFired=0;
+      cdAnimStart=now; cdAnimDur=w.burstCooldownMs;
+      document.getElementById('cooldown-toast').style.display='block';
+    }
+  }
+}
+
+function triggerBomb(now) {
+  if(!ship||(ship.bombs||0)<=0) return;
+  ship.bombs--;
+  const blastR=Math.min(LW,LH)*.40;
+  bombBlasts.push({x:ship.x,y:ship.y,r:0,maxR:blastR,alpha:1.0,startTime:now});
+  for(let j=enemies.length-1;j>=0;j--){
+    const e=enemies[j];
+    const dx=e.x-ship.x, dy=e.y-ship.y;
+    if(Math.sqrt(dx*dx+dy*dy)<blastR*.88){
+      if(e.isBoss){
+        burst(e.x,e.y,'#ffaa00',28);
+        e.hp-=8; // bomb does 8 damage to boss
+        if(e.hp<=0) killBoss(j);
+      } else {
+        burst(e.x,e.y,e.col||'#88aaff',14);
+        if(Math.random()<.15) powerUps.push(mkPowerUp(e.x,e.y));
+        else for(let k=0;k<(e.drop||1);k++) crystals.push(mkCrystal(e.x+(Math.random()-.5)*e.r*2,e.y));
+        score+=30; enemies.splice(j,1);
+      }
+    }
+  }
+  enemyBullets=enemyBullets.filter(b=>{const dx=b.x-ship.x,dy=b.y-ship.y;return Math.sqrt(dx*dx+dy*dy)>=blastR*.88;});
+  updateHUD();
+}
+
+function killBoss(idx) {
+  const boss=enemies[idx];
+  burst(boss.x,boss.y,'#ffd700',55);
+  burst(boss.x,boss.y,'#ffffff',20);
+  for(let k=0;k<10;k++) crystals.push(mkCrystal(boss.x+(Math.random()-.5)*boss.r*4,boss.y+(Math.random()-.5)*boss.r*3));
+  score+=500*(selectedWorld+1);
+  enemies.splice(idx,1);
+  if(ship){ ship.hp=ship.maxHp; } // Full HP restore on boss kill
+  updateHUD();
+  showWaveText('🏆 הבוס הובס!');
+}
+
+function aabb(a,b){ return Math.abs(a.x-b.x)<(a.w+b.w)*.5&&Math.abs(a.y-b.y)<(a.h+b.h)*.5; }
+
+/* ═══════════════════════════════════════
+   SECTION 7: WAVE SYSTEM
+   ═══════════════════════════════════════ */
+function waveThresh(i){ return WAVE_FRACS[i]*LH; }
+
+function spawnWave(wi) {
+  const waveDef=WORLD_WAVE_DEFS[selectedWorld][wi]||[];
+  waveDef.forEach((g,gi)=>{
+    if(g.type==='boss'){
+      enemies.push(mkBoss(selectedWorld));
+    } else {
+      formationX(g.form,g.count).forEach((fx,i)=>{
+        const r=D.enemyR(g.type);
+        enemies.push(mkEnemy(g.type,fx,-r*3-gi*r*6,i));
+      });
+    }
+  });
+}
+
+function formationX(form,n){
+  const cx=LW/2, xs=[], pad=LW*.1;
+  if(form==='line'){const span=LW*.72,s=cx-span/2;for(let i=0;i<n;i++)xs.push(s+i*(span/Math.max(n-1,1)));}
+  else if(form==='v'){const sp=LW*.09;for(let i=0;i<n;i++)xs.push(cx+(i-(n-1)/2)*sp);}
+  else if(form==='sides'){for(let i=0;i<n;i++)xs.push(i%2===0?pad+Math.random()*LW*.14:LW-pad-Math.random()*LW*.14);}
+  else if(form==='circle'){for(let i=0;i<n;i++)xs.push(cx+Math.cos(i/n*Math.PI*2-Math.PI/2)*LW*.3);}
+  else if(form==='center'){xs.push(cx);}
+  return xs;
+}
+
+function updateWaves(now) {
+  switch(wavePhase){
+    case WP.SCROLL:
+      bgScrollY+=D.scrollSpd();
+      if(currentWave<TOTAL_WAVES&&bgScrollY>=waveThresh(currentWave)){
+        wavePhase=WP.INCOMING; waveTimer=now+WAVE_ANNOUNCE_MS;
+        spawnWave(currentWave);
+        if(currentWave===TOTAL_WAVES-1){
+          showWaveText('⚠️ '+BOSS_STATS[selectedWorld].label+' ⚠️');
+        } else {
+          showWaveText('גל '+(currentWave+1)+'  !');
+        }
+      }
+      break;
+    case WP.INCOMING:
+      if(now>=waveTimer){wavePhase=WP.ACTIVE;hideWaveText();}
+      break;
+    case WP.ACTIVE:
+      if(enemies.length===0){wavePhase=WP.CLEARED;waveTimer=now+WAVE_CLEAR_PAUSE;showWaveText('✨  נוקה!  ✨');}
+      break;
+    case WP.CLEARED:
+      if(now>=waveTimer){
+        hideWaveText(); currentWave++;
+        if(currentWave>=TOTAL_WAVES) triggerGameOver(true);
+        else wavePhase=WP.SCROLL;
+      }
+      break;
+  }
+}
+
+function updateEnemies(ts) {
+  enemies.forEach(e=>{
+    if(e.isBoss){
+      if(e.y<LH*.22){e.y+=e.spd*3;return;}
+      e.mp+=.012;
+      e.x=LW/2+Math.sin(e.mp)*LW*.28;
+      e.x=Math.max(e.r*1.5,Math.min(LW-e.r*1.5,e.x));
+    } else {
+      if(e.y<LH*.13){e.y+=e.spd*2.8;return;}
+      e.mp+=.022;
+      e.x+=Math.sin(e.mp+e.fi*.9)*e.spd*1.4;
+      e.y+=Math.sin(e.mp*.45)*e.spd*.5;
+      e.x=Math.max(e.r*1.4,Math.min(LW-e.r*1.4,e.x));
+    }
+  });
+  enemyFireLogic(ts);
+}
+
+function enemyFireLogic(ts) {
+  if(!ship) return;
+  enemies.forEach(e=>{
+    if(e.isBoss){bossFire(e,ts);}
+    else {regularFire(e,ts);}
+  });
+}
+function regularFire(e,ts){
+  if(e.nextFireTime===0){e.nextFireTime=ts+1800+Math.random()*3000;return;}
+  if(e.y<LH*.14) return;
+  if(ts>=e.nextFireTime){
+    const dx=ship.x-e.x, dy=ship.y-e.y, len=Math.sqrt(dx*dx+dy*dy)||1, spd=LH*.0055;
+    enemyBullets.push(mkEnemyBullet(e.x,e.y+e.r*.8,dx/len*spd,dy/len*spd));
+    const def=ENEMY_DEFS[e.type];
+    e.nextFireTime=ts+(def?.baseFireInterval||4000)+Math.random()*2500;
+  }
+}
+function bossFire(boss,ts){
+  if(boss.y<LH*.22) return;
+  if(boss.nextFireTime===0){boss.nextFireTime=ts+2200;return;}
+  if(ts<boss.nextFireTime) return;
+  const spd=LH*.0042;
+  const spread=boss.hp/boss.maxHp<.5?7:5; // more bullets at low HP
+  for(let i=0;i<spread;i++){
+    const angle=Math.PI/2+(i-(spread-1)/2)*.28;
+    enemyBullets.push(mkEnemyBullet(boss.x,boss.y+boss.r*.5,Math.cos(angle)*spd,Math.sin(angle)*spd));
+  }
+  boss.nextFireTime=ts+1500;
+}
+
+function updateBullets()      { bullets     =bullets.filter(b=>{b.y+=b.speedY;return b.y>-120;}); }
+function updateEnemyBullets() { enemyBullets=enemyBullets.filter(b=>{b.x+=b.vx;b.y+=b.vy;return b.y<LH+80&&b.y>-80&&b.x>-80&&b.x<LW+80;}); }
+function updateCrystals()     { crystals    =crystals.filter(c=>{if(!c.collected){c.y+=c.speedY;c.spin+=c.ss;}return !c.collected&&c.y<LH+100;}); }
+function updatePowerUps()     { powerUps    =powerUps.filter(p=>{if(!p.collected){p.y+=p.speedY;p.spin+=p.ss;}return !p.collected&&p.y<LH+100;}); }
+function updateParticles()    { particles   =particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.alpha-=.024;p.vy+=.06;return p.alpha>0;}); }
+function updateBombBlasts(ts) {
+  bombBlasts=bombBlasts.filter(b=>{
+    const age=(ts-b.startTime)/1000;
+    b.r=b.maxR*Math.min(1,age*3.2);
+    b.alpha=Math.max(0,1-age*1.5);
+    return b.alpha>0;
+  });
+}
+
+function checkCollisions(now) {
+  // Player bullets vs enemies
+  outer: for(let i=bullets.length-1;i>=0;i--){
+    for(let j=enemies.length-1;j>=0;j--){
+      if(aabb(bullets[i],enemies[j])){
+        burst(bullets[i].x,bullets[i].y,'#ffdd88',5);
+        bullets.splice(i,1);
+        enemies[j].hp--;
+        if(enemies[j].hp<=0){
+          const e=enemies[j];
+          if(e.isBoss){
+            killBoss(j);
+          } else {
+            burst(e.x,e.y,e.col||'#88aaff',18);
+            if(Math.random()<.15) powerUps.push(mkPowerUp(e.x,e.y));
+            else for(let k=0;k<e.drop;k++) crystals.push(mkCrystal(e.x+(Math.random()-.5)*e.r*2,e.y));
+            enemies.splice(j,1);
+          }
+        }
+        continue outer;
+      }
+    }
+  }
+  // Ship vs crystals
+  crystals.forEach(c=>{
+    if(!c.collected&&ship&&aabb(ship,c)){
+      c.collected=true; score+=10; sessionCrystals++;
+      burst(c.x,c.y,'#ffd700',6); updateHUD();
+    }
+  });
+  // Ship vs powerups
+  powerUps.forEach(p=>{
+    if(!p.collected&&ship&&aabb(ship,p)){
+      p.collected=true; ship.bombs=(ship.bombs||0)+1;
+      burst(p.x,p.y,'#ffaa00',10); updateHUD();
+    }
+  });
+  // Enemy bullets vs ship
+  if(ship&&now>ship.invUntil){
+    for(let i=enemyBullets.length-1;i>=0;i--){
+      if(aabb(ship,enemyBullets[i])){
+        enemyBullets.splice(i,1); ship.hp--; ship.invUntil=now+1500;
+        burst(ship.x,ship.y,'#ff4444',22); updateHUD();
+        if(ship.hp<=0) triggerGameOver(false); break;
+      }
+    }
+  }
+  // Enemies ramming ship
+  if(ship&&now>ship.invUntil){
+    for(let j=enemies.length-1;j>=0;j--){
+      if(!enemies[j].isBoss&&aabb(ship,enemies[j])){
+        ship.hp--; ship.invUntil=now+1500;
+        burst(ship.x,ship.y,'#ff4444',22); updateHUD();
+        if(ship.hp<=0) triggerGameOver(false); break;
+      }
+    }
+  }
+}
+
+/* ═══════════════════════════════════════
+   SECTION 8: RENDERING
+   ═══════════════════════════════════════ */
+function initVisuals() {
+  stars=[];
+  [{n:55,rMax:1.0,par:.05,a:.45},{n:38,rMax:1.6,par:.18,a:.70},{n:18,rMax:2.8,par:.40,a:.90}]
+    .forEach(l=>{
+      for(let i=0;i<l.n;i++) stars.push({
+        x:Math.random()*LW, baseY:Math.random()*LH*6,
+        r:.5+Math.random()*l.rMax, par:l.par, maxA:l.a,
+        ts:.4+Math.random()*1.5, to:Math.random()*Math.PI*2,
+      });
+    });
+  nebulas=[];
+  for(let i=0;i<10;i++) nebulas.push({
+    x:Math.random()*LW, baseY:Math.random()*LH*6,
+    rx:LW*(.12+Math.random()*.22), ry:LH*(.18+Math.random()*.28),
+    hue:262+Math.random()*75, alpha:.055+Math.random()*.075,
+  });
+}
+
+function getWorldPalette() { return WORLDS_META[selectedWorld]?.palette||WORLDS_META[0].palette; }
+
+function render(ts) {
+  const t=ts*.001;
+  ctx.clearRect(0,0,LW,LH);
+  drawBg(); drawNebulas(); drawStars(t);
+  drawPowerUps(); drawCrystals();
+  drawEnemies(t); drawEnemyBullets();
+  drawBullets(); drawShip(t);
+  drawBombBlasts(); drawParticles();
+  drawBossBar();
+  tickCooldownHUD(ts);
+}
+
+function drawBg() {
+  const p=getWorldPalette();
+  const g=ctx.createLinearGradient(0,0,0,LH);
+  g.addColorStop(0,p.bg1); g.addColorStop(.4,p.bg2); g.addColorStop(1,p.bg1);
+  ctx.fillStyle=g; ctx.fillRect(0,0,LW,LH);
+}
+function drawNebulas() {
+  const p=getWorldPalette();
+  nebulas.forEach(n=>{
+    const totalH=LH*6, rawY=n.baseY-bgScrollY*.18;
+    const y=((rawY%totalH)+totalH)%totalH-LH;
+    if(y<-n.ry*2.5||y>LH+n.ry*2.5) return;
+    ctx.save(); ctx.translate(n.x,y); ctx.scale(n.rx,n.ry);
+    const g=ctx.createRadialGradient(0,0,0,0,0,1);
+    const nh=p.nh+Math.floor((n.hue-262)/75*30);
+    g.addColorStop(0,`hsla(${nh},88%,62%,${n.alpha})`);
+    g.addColorStop(.45,`hsla(${nh+18},70%,40%,${n.alpha*.55})`);
+    g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,1,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+function drawStars(t) {
+  const p=getWorldPalette();
+  const [sr,sg,sb]=p.sc.split(',').map(Number);
+  stars.forEach(s=>{
+    const totalH=LH*6;
+    const y=((s.baseY-bgScrollY*s.par)%totalH+totalH)%totalH;
+    const a=s.maxA*(.45+.55*Math.abs(Math.sin(t*s.ts+s.to)));
+    ctx.beginPath(); ctx.arc(s.x,y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${sr},${sg},${sb},${a})`; ctx.fill();
+  });
+}
+function drawCrystals() {
+  crystals.forEach(c=>{
+    if(c.collected) return;
+    const r=c.r;
+    ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.spin);
+    ctx.shadowBlur=14; ctx.shadowColor=`hsl(${c.hue},100%,68%)`;
+    ctx.beginPath();
+    ctx.moveTo(0,-r*1.4); ctx.lineTo(r*.75,-r*.35); ctx.lineTo(r*.85,r*.6);
+    ctx.lineTo(0,r*1.4); ctx.lineTo(-r*.85,r*.6); ctx.lineTo(-r*.75,-r*.35);
+    ctx.closePath();
+    const g=ctx.createLinearGradient(0,-r*1.4,0,r*1.4);
+    g.addColorStop(0,`hsl(${c.hue},100%,92%)`); g.addColorStop(.4,`hsl(${c.hue},100%,75%)`); g.addColorStop(1,`hsl(${c.hue+28},100%,52%)`);
+    ctx.fillStyle=g; ctx.fill();
+    ctx.shadowBlur=0; ctx.fillStyle='rgba(255,255,255,.55)';
+    ctx.beginPath(); ctx.ellipse(-r*.2,-r*.5,r*.2,r*.38,-.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+function drawPowerUps() {
+  powerUps.forEach(p=>{
+    if(p.collected) return;
+    const r=p.r;
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.spin);
+    ctx.shadowBlur=24; ctx.shadowColor='#ff8800';
+    const bg=ctx.createRadialGradient(0,0,r*.3,0,0,r);
+    bg.addColorStop(0,'#ffee88'); bg.addColorStop(.5,'#ff8800'); bg.addColorStop(1,'#cc4400');
+    ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#ffcc00'; ctx.lineWidth=r*.12; ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#1a1a2a'; ctx.beginPath(); ctx.arc(0,r*.1,r*.54,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#ffaa00'; ctx.lineWidth=r*.1; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(r*.25,-r*.38); ctx.quadraticCurveTo(r*.55,-r*.72,r*.16,-r*.85); ctx.stroke();
+    ctx.fillStyle='#ffff44'; ctx.shadowBlur=10; ctx.shadowColor='#ffff00';
+    ctx.beginPath(); ctx.arc(r*.16,-r*.85,r*.11,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.restore();
+  });
+}
+
+// Color helpers
+function hex2rgb(hex){ return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)]; }
+function lighten(hex,p){ const[r,g,b]=hex2rgb(hex); return `rgb(${Math.min(255,r+p*2.55|0)},${Math.min(255,g+p*2.55|0)},${Math.min(255,b+p*2.55|0)})`; }
+function darken(hex,p)  { const[r,g,b]=hex2rgb(hex); return `rgb(${Math.max(0,r-p*2.55|0)},${Math.max(0,g-p*2.55|0)},${Math.max(0,b-p*2.55|0)})`; }
+
+function drawEnemies(t) {
+  enemies.forEach(e=>{
+    const r=e.r||D.enemyR(e.type);
+    ctx.save(); ctx.translate(e.x,e.y);
+    if(e.isBoss){
+      drawBossShape(r,e,t);
+    } else {
+      ctx.rotate(Math.sin(t*2.5+e.fi)*.07);
+      drawJetShape(r,e.type,e.world!=null?e.world:selectedWorld);
+      if(e.maxHp>1){
+        const bw=r*2.2,bh=r*.22,bx=-bw/2,by=-r*1.65;
+        ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(bx-1,by-1,bw+2,bh+2);
+        ctx.fillStyle='#222'; ctx.fillRect(bx,by,bw,bh);
+        ctx.fillStyle=e.hp/e.maxHp>.5?'#44ff88':'#ffcc00';
+        ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),bh);
+      }
+    }
+    ctx.restore();
+  });
+}
+
+function drawJetShape(r,type,worldId) {
+  const palette=JET_WORLD_PALETTES[worldId||0];
+  const c=palette[type]||palette.jet_basic;
+
+  // Engine glow
+  const exhG=ctx.createRadialGradient(0,-r*.82,0,0,-r*.82,r*.68);
+  exhG.addColorStop(0,c.exhaust); exhG.addColorStop(.3,c.exhaust+'88'); exhG.addColorStop(1,'transparent');
+  ctx.fillStyle=exhG; ctx.beginPath(); ctx.ellipse(0,-r*.82,r*.28,r*.62,0,0,Math.PI*2); ctx.fill();
+
+  // Tail fins
+  ctx.fillStyle=c.wing;
+  [-1,1].forEach(s=>{
+    ctx.beginPath();
+    ctx.moveTo(s*r*.22,-r*.52); ctx.lineTo(s*r*.72,-r*.92); ctx.lineTo(s*r*.30,-r*.35);
+    ctx.closePath(); ctx.fill();
+  });
+
+  // Wings
+  ctx.shadowBlur=10; ctx.shadowColor=c.accent+'44';
+  ctx.fillStyle=c.wing;
+  ctx.beginPath();
+  ctx.moveTo(0,r*.20); ctx.lineTo(-r*1.58,r*.65); ctx.lineTo(-r*.90,r*.92);
+  ctx.lineTo(-r*.28,r*.50); ctx.lineTo(r*.28,r*.50); ctx.lineTo(r*.90,r*.92);
+  ctx.lineTo(r*1.58,r*.65); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0;
+
+  ctx.strokeStyle=c.accent+'55'; ctx.lineWidth=r*.04;
+  ctx.beginPath(); ctx.moveTo(-r*1.58,r*.65); ctx.lineTo(0,r*.20); ctx.lineTo(r*1.58,r*.65); ctx.stroke();
+
+  // Fuselage
+  const bodyG=ctx.createLinearGradient(-r*.32,0,r*.32,0);
+  bodyG.addColorStop(0,darken(c.hull,20)); bodyG.addColorStop(.22,lighten(c.hull,24));
+  bodyG.addColorStop(.55,lighten(c.hull,10)); bodyG.addColorStop(.78,c.hull); bodyG.addColorStop(1,darken(c.hull,14));
+  ctx.shadowBlur=14; ctx.shadowColor=c.accent+'44';
+  ctx.fillStyle=bodyG;
+  ctx.beginPath();
+  ctx.moveTo(0,r*1.05);
+  ctx.bezierCurveTo(r*.34,r*.62,r*.30,-r*.48,r*.21,-r*1.04);
+  ctx.lineTo(-r*.21,-r*1.04);
+  ctx.bezierCurveTo(-r*.30,-r*.48,-r*.34,r*.62,0,r*1.05);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=lighten(c.hull,35)+'77'; ctx.lineWidth=r*.055; ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Stripe
+  ctx.strokeStyle=c.stripe+'77'; ctx.lineWidth=r*.055;
+  ctx.beginPath(); ctx.moveTo(0,r*.88); ctx.lineTo(0,-r*.88); ctx.stroke();
+
+  // Cockpit
+  ctx.beginPath(); ctx.ellipse(0,r*.20,r*.19,r*.40,0,0,Math.PI*2);
+  const cgG=ctx.createRadialGradient(-r*.06,r*.06,r*.02,0,r*.20,r*.19);
+  cgG.addColorStop(0,'rgba(255,255,255,.88)'); cgG.addColorStop(.4,c.cockpit+'bb'); cgG.addColorStop(1,c.cockpit+'33');
+  ctx.fillStyle=cgG; ctx.fill();
+  ctx.strokeStyle=c.cockpit+'99'; ctx.lineWidth=r*.045; ctx.stroke();
+
+  // Nozzle
+  ctx.beginPath(); ctx.arc(0,-r*.96,r*.165,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,-r*.96,r*.10,0,Math.PI*2); ctx.fillStyle=c.exhaust+'cc'; ctx.fill();
+
+  if(type==='jet_heavy'){
+    [-0.95,0.95].forEach(sx=>{
+      ctx.fillStyle='#555'; ctx.beginPath(); ctx.ellipse(sx*r,r*.58,r*.09,r*.26,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ff4400'; ctx.beginPath(); ctx.arc(sx*r,r*.73,r*.07,0,Math.PI*2); ctx.fill();
+    });
+  }
+  if(type==='jet_fast'){
+    [-0.18,0.18].forEach(sx=>{
+      ctx.beginPath(); ctx.arc(sx*r,-r*.93,r*.10,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+      ctx.beginPath(); ctx.arc(sx*r,-r*.93,r*.065,0,Math.PI*2); ctx.fillStyle=c.exhaust+'cc'; ctx.fill();
+    });
+  }
+}
+
+function drawBossShape(r,boss,t) {
+  const world=boss.world!=null?boss.world:selectedWorld;
+  const bp=BOSS_PALETTES[world];
+  ctx.rotate(Math.sin(t*1.1)*.025);
+
+  // Pulsing aura
+  const aura=ctx.createRadialGradient(0,0,r*.5,0,0,r*2.2);
+  aura.addColorStop(0,bp.glow+'33'); aura.addColorStop(1,'transparent');
+  ctx.fillStyle=aura; ctx.beginPath(); ctx.arc(0,0,r*2.2,0,Math.PI*2); ctx.fill();
+
+  // Engine exhaust (top)
+  const exhG=ctx.createRadialGradient(0,-r*.9,0,0,-r*.9,r*.9);
+  exhG.addColorStop(0,bp.exhaust); exhG.addColorStop(.4,bp.exhaust+'55'); exhG.addColorStop(1,'transparent');
+  ctx.fillStyle=exhG; ctx.beginPath(); ctx.ellipse(0,-r*.9,r*.38,r*.85,0,0,Math.PI*2); ctx.fill();
+
+  // Side engines
+  [-1,1].forEach(s=>{
+    const sg=ctx.createRadialGradient(s*r*.8,-r*.65,0,s*r*.8,-r*.65,r*.45);
+    sg.addColorStop(0,bp.exhaust+'cc'); sg.addColorStop(1,'transparent');
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.ellipse(s*r*.8,-r*.65,r*.18,r*.42,0,0,Math.PI*2); ctx.fill();
+  });
+
+  // Double wings (outer)
+  ctx.shadowBlur=22; ctx.shadowColor=bp.glow+'55';
+  ctx.fillStyle=bp.wing;
+  ctx.beginPath();
+  ctx.moveTo(0,r*.25); ctx.lineTo(-r*2.40,r*.80); ctx.lineTo(-r*1.70,r*1.15);
+  ctx.lineTo(-r*.35,r*.65); ctx.lineTo(r*.35,r*.65); ctx.lineTo(r*1.70,r*1.15);
+  ctx.lineTo(r*2.40,r*.80); ctx.closePath(); ctx.fill();
+
+  // Inner wings
+  ctx.fillStyle=darken(bp.hull,10)+'cc';
+  ctx.beginPath();
+  ctx.moveTo(-r*.30,r*.10); ctx.lineTo(-r*1.20,r*.55); ctx.lineTo(-r*.90,r*.75);
+  ctx.lineTo(-r*.30,r*.50); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(r*.30,r*.10); ctx.lineTo(r*1.20,r*.55); ctx.lineTo(r*.90,r*.75);
+  ctx.lineTo(r*.30,r*.50); ctx.closePath(); ctx.fill();
+
+  ctx.shadowBlur=0;
+  ctx.strokeStyle=bp.hull+'77'; ctx.lineWidth=r*.04;
+  ctx.beginPath(); ctx.moveTo(-r*2.40,r*.80); ctx.lineTo(0,r*.25); ctx.lineTo(r*2.40,r*.80); ctx.stroke();
+
+  // Fuselage
+  const bodyG=ctx.createLinearGradient(-r*.5,0,r*.5,0);
+  bodyG.addColorStop(0,darken(bp.hull,20)); bodyG.addColorStop(.25,lighten(bp.hull,22));
+  bodyG.addColorStop(.5,lighten(bp.hull,8)); bodyG.addColorStop(.75,bp.hull); bodyG.addColorStop(1,darken(bp.hull,14));
+  ctx.shadowBlur=22; ctx.shadowColor=bp.glow+'44';
+  ctx.fillStyle=bodyG;
+  ctx.beginPath();
+  ctx.moveTo(0,r*1.30);
+  ctx.bezierCurveTo(r*.55,r*.85,r*.52,-r*.62,r*.32,-r*1.25);
+  ctx.lineTo(-r*.32,-r*1.25);
+  ctx.bezierCurveTo(-r*.52,-r*.62,-r*.55,r*.85,0,r*1.30);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=lighten(bp.hull,35)+'88'; ctx.lineWidth=r*.06; ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Cockpit
+  ctx.beginPath(); ctx.ellipse(0,r*.22,r*.22,r*.52,0,0,Math.PI*2);
+  const cwG=ctx.createRadialGradient(-r*.08,r*.06,r*.02,0,r*.22,r*.22);
+  cwG.addColorStop(0,'rgba(255,255,255,.92)'); cwG.addColorStop(.4,bp.cockpit+'bb'); cwG.addColorStop(1,bp.cockpit+'33');
+  ctx.fillStyle=cwG; ctx.fill();
+  ctx.strokeStyle=bp.cockpit+'99'; ctx.lineWidth=r*.05; ctx.stroke();
+
+  // Triple cannons
+  [-0.75,0,0.75].forEach(xf=>{
+    ctx.fillStyle='#333'; ctx.beginPath(); ctx.ellipse(xf*r,r*.75,r*.09,r*.30,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=bp.exhaust+'99'; ctx.beginPath(); ctx.arc(xf*r,r*.90,r*.075,0,Math.PI*2); ctx.fill();
+  });
+
+  // Nose glow
+  ctx.beginPath(); ctx.arc(0,r*1.30,r*.12,0,Math.PI*2);
+  ctx.fillStyle=bp.glow+'cc'; ctx.fill();
+}
+
+function drawBossBar() {
+  const boss=enemies.find(e=>e.isBoss);
+  if(!boss) return;
+  const bw=LW*.6, bh=LH*.024, bx=(LW-bw)/2, by=LH*.068;
+  const pct=boss.hp/boss.maxHp;
+  // Background
+  ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillRect(bx-5,by-20,bw+10,bh+26);
+  // Track
+  ctx.fillStyle='#222'; ctx.fillRect(bx,by,bw,bh);
+  // Fill (color changes with HP)
+  const fillColor=pct>.6?'#ff3300':pct>.3?'#ff8800':'#ffcc00';
+  const barG=ctx.createLinearGradient(bx,by,bx+bw*pct,by+bh);
+  barG.addColorStop(0,lighten(fillColor,30)); barG.addColorStop(1,fillColor);
+  ctx.fillStyle=barG; ctx.fillRect(bx,by,bw*pct,bh);
+  // Border
+  ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1.5; ctx.strokeRect(bx,by,bw,bh);
+  // Label
+  ctx.fillStyle='#fff'; ctx.font=`bold ${LH*.022}px Segoe UI`;
+  ctx.textAlign='center';
+  ctx.shadowBlur=8; ctx.shadowColor=BOSS_PALETTES[selectedWorld].glow;
+  ctx.fillText('⚔️  '+BOSS_STATS[selectedWorld].label+'  ⚔️',LW/2,by-4);
+  ctx.shadowBlur=0; ctx.textAlign='left';
+}
+
+function drawEnemyBullets() {
+  enemyBullets.forEach(b=>{
+    ctx.save(); ctx.shadowBlur=18; ctx.shadowColor='#ff4400';
+    const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
+    g.addColorStop(0,'#ffffff'); g.addColorStop(.28,'#ffaa00'); g.addColorStop(.65,'#ff3300'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.restore();
+  });
+}
+function drawBullets() {
+  bullets.forEach(b=>{
+    ctx.save(); ctx.shadowBlur=20; ctx.shadowColor=b.color;
+    const g=ctx.createLinearGradient(b.x,b.y-b.h*.5,b.x,b.y+b.h*.5);
+    g.addColorStop(0,'#ffffff'); g.addColorStop(.12,b.color); g.addColorStop(.55,b.color+'aa'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(b.x,b.y,b.w/2,b.h/2,0,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=8; ctx.fillStyle='rgba(255,255,255,.9)';
+    ctx.beginPath(); ctx.ellipse(b.x,b.y-b.h*.18,b.w*.22,b.h*.18,0,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.restore();
+  });
+}
+function drawBombBlasts() {
+  bombBlasts.forEach(b=>{
+    ctx.save(); ctx.globalAlpha=b.alpha;
+    const gIn=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*.55);
+    gIn.addColorStop(0,`rgba(255,255,220,${b.alpha*.45})`);
+    gIn.addColorStop(.5,`rgba(255,140,0,${b.alpha*.22})`);
+    gIn.addColorStop(1,'transparent');
+    ctx.fillStyle=gIn; ctx.beginPath(); ctx.arc(b.x,b.y,b.r*.55,0,Math.PI*2); ctx.fill();
+    [1.0,.76,.54,.36].forEach((rf,i)=>{
+      ctx.beginPath(); ctx.arc(b.x,b.y,b.r*rf,0,Math.PI*2);
+      ctx.strokeStyle=i===0?`rgba(255,200,0,${b.alpha*.9})`:`rgba(255,130,0,${b.alpha*.5})`;
+      ctx.lineWidth=(i===0?7:3)*b.alpha; ctx.stroke();
+    });
+    ctx.globalAlpha=1; ctx.restore();
+  });
+}
+function drawShip(t) {
+  if(!ship) return;
+  const {x,y}=ship, sh=D.shipH(), sw=D.shipW();
+  ctx.save(); ctx.translate(x,y);
+  const fp=.65+.35*Math.sin(t*9.5), fh=sh*1.05*fp;
+  const fg=ctx.createLinearGradient(0,sh*.28,0,sh*.28+fh);
+  fg.addColorStop(0,'rgba(255,255,255,.97)'); fg.addColorStop(.2,`rgba(0,220,255,${.85*fp})`);
+  fg.addColorStop(.55,`rgba(120,0,255,${.6*fp})`); fg.addColorStop(1,'transparent');
+  ctx.fillStyle=fg;
+  ctx.beginPath(); ctx.moveTo(-sw*.38,sh*.28);
+  ctx.quadraticCurveTo(-sw*.12,sh*.28+fh*.6,0,sh*.28+fh*1.15);
+  ctx.quadraticCurveTo(sw*.12,sh*.28+fh*.6,sw*.38,sh*.28); ctx.fill();
+  [-1,1].forEach(side=>{
+    const bfg=ctx.createLinearGradient(0,sh*.15,0,sh*.15+fh*.6);
+    bfg.addColorStop(0,'rgba(200,100,255,.9)'); bfg.addColorStop(1,'transparent');
+    ctx.fillStyle=bfg;
+    ctx.beginPath(); ctx.moveTo(side*sw*.55,sh*.15);
+    ctx.quadraticCurveTo(side*sw*.68,sh*.15+fh*.35,side*sw*.55,sh*.15+fh*.55); ctx.fill();
+  });
+  ctx.shadowBlur=18; ctx.shadowColor='#9900ff55';
+  const wg=[ctx.createLinearGradient(-sw*1.7,0,-sw*.55,0),ctx.createLinearGradient(sw*.55,0,sw*1.7,0)];
+  wg[0].addColorStop(0,'#440066'); wg[0].addColorStop(1,'#bb44ff');
+  wg[1].addColorStop(0,'#bb44ff'); wg[1].addColorStop(1,'#440066');
+  [[-1,wg[0]],[1,wg[1]]].forEach(([s,g])=>{
+    ctx.beginPath(); ctx.moveTo(s*sw*.55,sh*.0); ctx.lineTo(s*sw*1.70,sh*.42);
+    ctx.lineTo(s*sw*1.40,sh*.52); ctx.lineTo(s*sw*.55,sh*.28);
+    ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='rgba(255,128,255,.5)'; ctx.lineWidth=1; ctx.stroke();
+  });
+  ctx.shadowBlur=20; ctx.shadowColor='#ff00ff44';
+  ctx.beginPath(); ctx.moveTo(0,-sh);
+  ctx.bezierCurveTo(sw*1.05,-sh*.5,sw*.92,-sh*.1,sw*.62,sh*.22);
+  ctx.lineTo(sw*.52,sh*.52); ctx.lineTo(-sw*.52,sh*.52); ctx.lineTo(-sw*.62,sh*.22);
+  ctx.bezierCurveTo(-sw*.92,-sh*.1,-sw*1.05,-sh*.5,0,-sh); ctx.closePath();
+  const bg2=ctx.createLinearGradient(-sw,-sh,sw,sh);
+  bg2.addColorStop(0,'#8822bb'); bg2.addColorStop(.3,'#cc66ff'); bg2.addColorStop(.5,'#9933cc');
+  bg2.addColorStop(.75,'#7722aa'); bg2.addColorStop(1,'#440088');
+  ctx.fillStyle=bg2; ctx.fill();
+  ctx.strokeStyle='rgba(255,160,255,.6)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(255,200,255,.2)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-sw*.2,-sh*.3); ctx.lineTo(-sw*.35,sh*.45); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sw*.2,-sh*.3); ctx.lineTo(sw*.35,sh*.45); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0,-sh*.18,sw*.38,sh*.46,0,0,Math.PI*2);
+  const cwG=ctx.createRadialGradient(-sw*.1,-sh*.38,sw*.04,0,-sh*.18,sw*.38);
+  cwG.addColorStop(0,'rgba(230,255,255,.97)'); cwG.addColorStop(.45,'rgba(100,200,255,.55)'); cwG.addColorStop(1,'rgba(0,80,180,.30)');
+  ctx.fillStyle=cwG; ctx.fill(); ctx.strokeStyle='rgba(200,240,255,.65)'; ctx.lineWidth=1.2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,-sh,sw*.15,0,Math.PI*2); ctx.fillStyle='rgba(255,200,255,.75)'; ctx.fill();
+  if(ship.invUntil>performance.now()&&Math.sin(t*28)>0){
+    ctx.globalAlpha=.28; ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.ellipse(0,0,sw*1.8,sh*1.1,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+function drawParticles() {
+  particles.forEach(p=>{
+    ctx.save(); ctx.globalAlpha=p.alpha;
+    ctx.shadowBlur=8; ctx.shadowColor=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.color; ctx.fill();
+    ctx.shadowBlur=0; ctx.restore();
+  });
+}
+function tickCooldownHUD(ts) {
+  if(cdAnimDur>0){
+    const pct=Math.min(1,(ts-cdAnimStart)/cdAnimDur);
+    document.getElementById('cooldown-prog').value=pct*100;
+    if(pct>=1){cdAnimDur=0;document.getElementById('cooldown-toast').style.display='none';}
+  }
+}
+
+/* ═══════════════════════════════════════
+   SECTION 9: UI SCREENS & HUD
+   ═══════════════════════════════════════ */
+function showScreen(name) {
+  appState=name;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('screen-'+name);
+  if(el) el.classList.add('active');
+  const inGame=name==='game';
+  const showCams=inGame&&gameMode==='coop';
+  document.getElementById('hud').classList.toggle('visible',inGame);
+  document.getElementById('cockpit-you').classList.toggle('visible',showCams);
+  document.getElementById('cockpit-partner').classList.toggle('visible',showCams);
+}
+
+function showConn(text,color){
+  const el=document.getElementById('conn-status');
+  el.textContent=text; el.style.color=color; el.style.display='block';
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',3000);
+}
+function setLobbyStatus(m){ document.getElementById('lobby-status').textContent=m; }
+function setLobbyError(m) { document.getElementById('lobby-error').textContent=m; }
+function showWaveText(t)  { const e=document.getElementById('wave-announce'); e.textContent=t; e.classList.add('show'); }
+function hideWaveText()   { document.getElementById('wave-announce').classList.remove('show'); }
+
+function updateHUD() {
+  if(!ship) return;
+  document.getElementById('hud-role-val').textContent     = gameMode==='single'?'🎮 שחקן יחיד':localRole==='navigator'?'🚀 נווט':'⚡ יורה';
+  document.getElementById('hud-crystals-val').textContent = loadCrystals()+sessionCrystals;
+  const wn=WEAPONS[ship.weapon];
+  document.getElementById('hud-weapon-val').textContent   = wn?(wn.namehe||wn.name):'לייזר בסיסי';
+  document.getElementById('hud-bombs-val').textContent    = '💣 '+(ship.bombs||0);
+  document.getElementById('hud-wave-val').textContent     = 'גל '+(Math.min(currentWave,TOTAL_WAVES-1)+1)+' / '+TOTAL_WAVES+' | עולם '+(selectedWorld+1);
+  const h=ship.hp, m=ship.maxHp;
+  document.getElementById('hud-hp-val').innerHTML=
+    '<span style="color:#ff4444">'+'♥'.repeat(Math.max(0,h))+'</span>'+
+    '<span style="color:#333">'+'♥'.repeat(Math.max(0,m-h))+'</span>';
+}
+
+function updateRoleWorldLabel() {
+  const w=WORLDS_META[selectedWorld];
+  document.getElementById('role-world-label').textContent='🌍 עולם '+(selectedWorld+1)+': '+w.name;
+}
+
+function applyRoles(hostRole,guestRole) {
+  document.getElementById('role-nav').classList.toggle('chosen',hostRole==='navigator');
+  document.getElementById('role-shoot').classList.toggle('chosen',hostRole==='shooter');
+  const rHe=r=>r==='navigator'?'נווט':'יורה';
+  document.getElementById('role-note').textContent=isHost
+    ?`אתה: ${rHe(hostRole)} — שותף: ${rHe(guestRole)}`
+    :`אתה: ${rHe(guestRole)} — שותף: ${rHe(hostRole)}`;
+  document.getElementById('btn-start-game').disabled=false;
+}
+
+function refreshHangar() {
+  const c=loadCrystals();
+  document.getElementById('hangar-balance').textContent='💎 '+c+' יהלומים';
+  const owned=hasWeapon('doubleLaser');
+  const btn=document.getElementById('btn-buy-double'), cost=document.getElementById('double-cost');
+  document.getElementById('card-double').classList.toggle('owned',owned);
+  if(owned){ cost.textContent='✅ קנוי'; btn.textContent='בחר'; btn.className='btn btn-cyan btn-sm'; btn.disabled=false; }
+  else { cost.textContent='💎 100 יהלומים'; btn.textContent=c>=100?'קנה':'אין מספיק 💎'; btn.className=c>=100?'btn btn-gold btn-sm':'btn btn-gray btn-sm'; btn.disabled=c<100; }
+}
+
+function renderWorldsScreen() {
+  const ul=loadWorldsUnlocked();
+  const cleared=loadLevels();
+  const grid=document.getElementById('world-grid');
+  grid.innerHTML='';
+  WORLDS_META.forEach((w,i)=>{
+    const unlocked=ul.includes(i);
+    const isCleared=cleared.includes(i);
+    const card=document.createElement('div');
+    card.className='world-card'+(unlocked?'':' locked')+(isCleared?' cleared':'');
+    card.innerHTML=`
+      ${unlocked?'':'<div class="world-lock">🔒</div>'}
+      <div class="world-icon">${w.icon}</div>
+      <div class="world-num">עולם ${i+1}</div>
+      <div class="world-name">${w.name}</div>
+      <div class="world-state">${isCleared?'✅ הושלם':unlocked?'🔓 פתוח':'🔒 נעול'}</div>
+    `;
+    if(unlocked&&(gameMode==='single'||isHost)){
+      card.style.cursor='pointer';
+      card.addEventListener('click',()=>{
+        selectedWorld=i;
+        updateRoleWorldLabel();
+        if(gameMode==='single'){
+          // Single player: skip role select, go straight to game
+          activeWeapon=hasWeapon('doubleLaser')?'doubleLaser':'basicLaser';
+          initGame(); ship.weapon=activeWeapon;
+          startGameScreen();
+        } else {
+          send({type:'worldChosen',world:i});
+          showScreen('role');
+        }
+      });
+    }
+    grid.appendChild(card);
+  });
+  const statusEl=document.getElementById('worlds-status');
+  const subtitleEl=document.getElementById('worlds-subtitle');
+  if(gameMode==='single'){
+    statusEl.textContent='בחר עולם להתחיל';
+    subtitleEl.textContent='בחר עולם — שחקן יחיד';
+  } else if(isHost){
+    statusEl.textContent='בחר עולם להתחיל';
+    subtitleEl.textContent='בחר עולם להתמודד';
+  } else {
+    statusEl.textContent='ממתין למארח לבחור עולם...';
+    subtitleEl.textContent='ממתין לשותף...';
+  }
+}
+
+/* ═══════════════════════════════════════
+   SECTION 10: GAME LOOP
+   ═══════════════════════════════════════ */
+function initGame() {
+  nextId=1; ship=mkShip();
+  enemies=[]; bullets=[]; crystals=[]; particles=[];
+  enemyBullets=[]; powerUps=[]; bombBlasts=[];
+  score=0; sessionCrystals=0; bgScrollY=0;
+  smoothVx=0; smoothVy=0;
+  wavePhase=WP.SCROLL; currentWave=0; waveTimer=0;
+  cdAnimDur=0; guestKeys={};
+  initVisuals();
+}
+
+let idleFrame=null, idleScrollY=0;
+
+function idleLoop(ts) {
+  idleFrame=requestAnimationFrame(idleLoop);
+  if(appState==='game') return;
+  idleScrollY+=D.scrollSpd()*.4;
+  const saved=bgScrollY; bgScrollY=idleScrollY;
+  ctx.clearRect(0,0,LW,LH);
+  drawBg(); drawNebulas(); drawStars(ts*.001);
+  bgScrollY=saved;
+}
+
+function startGameScreen() {
+  showScreen('game'); updateHUD();
+  if(isHost&&gameMode==='coop') startSyncLoop();
+  if(animFrame) cancelAnimationFrame(animFrame);
+  animFrame=requestAnimationFrame(loop);
+}
+
+function loop(ts) {
+  if(appState!=='game') return;
+  animFrame=requestAnimationFrame(loop);
+  if(isHost){
+    updateWaves(ts); updateShip();
+    updateEnemies(ts); updateBullets(); updateEnemyBullets();
+    updateCrystals(); updatePowerUps(); updateParticles();
+    updateBombBlasts(ts);
+    checkCollisions(ts);
+    render(ts); updateHUD();
+  } else {
+    if(remoteState) renderRemote(remoteState,ts);
+  }
+}
+
+function renderRemote(rs,ts) {
+  bgScrollY    =(rs.bgN||0)*LH;
+  wavePhase    =rs.wavePhase||WP.SCROLL;
+  currentWave  =rs.currentWave||0;
+  score        =rs.score||0;
+  if(rs.selectedWorld!=null) selectedWorld=rs.selectedWorld;
+
+  enemies=  (rs.enemies||[]).map(e=>{
+    const isBoss=e.isBoss||e.type==='boss';
+    const r=isBoss?D.enemyR('boss'):D.enemyR(e.type);
+    return {...e,x:e.nx*LW,y:e.ny*LH,r,w:r*(isBoss?3.5:3),h:r*(isBoss?3.5:3),
+            col:isBoss?'#ffd700':(ENEMY_DEFS[e.type]?.col||'#4466cc'),fi:e.fi||0,mp:e.mp||0};
+  });
+  bullets=      (rs.bullets||[]).map(b=>({...b,x:b.nx*LW,y:b.ny*LH,w:7,h:D.bulletH()}));
+  crystals=     (rs.crystals||[]).map(c=>({...c,x:c.nx*LW,y:c.ny*LH,r:D.crystalR()}));
+  particles=    (rs.parts||[]).map(p=>({...p,x:p.nx*LW,y:p.ny*LH,r:p.rn*LH}));
+  enemyBullets= (rs.enemyBullets||[]).map(b=>({...b,x:b.nx*LW,y:b.ny*LH,r:9,w:18,h:18}));
+  powerUps=     (rs.powerUps||[]).map(p=>({...p,x:p.nx*LW,y:p.ny*LH,r:D.crystalR()*2.6}));
+  bombBlasts=   (rs.bombBlasts||[]).map(b=>({...b,x:b.nx*LW,y:b.ny*LH,r:b.rn*LH,maxR:b.maxRn*LH}));
+
+  if(rs.ship){
+    if(!ship) ship=mkShip();
+    ship.x=rs.ship.nx*LW; ship.y=rs.ship.ny*LH;
+    Object.assign(ship,{hp:rs.ship.hp,weapon:rs.ship.weapon,
+      shotsFired:rs.ship.shotsFired,cooldownUntil:rs.ship.cooldownUntil,bombs:rs.ship.bombs||0});
+  }
+  render(ts); updateHUD();
+  if(ship&&ship.cooldownUntil>ts&&cdAnimDur===0){
+    cdAnimStart=ts; cdAnimDur=BURST_COOLDOWN_MS;
+    document.getElementById('cooldown-toast').style.display='block';
+  }
+}
+
+function triggerGameOver(survived) {
+  if(appState!=='game') return;
+  saveCrystals(loadCrystals()+sessionCrystals);
+  if(survived){
+    saveLevel(selectedWorld);
+    unlockNextWorld();
+  }
+  if(isHost&&gameMode==='coop') send({type:'gameOver',crystals:sessionCrystals,score,survived});
+  endGame(survived);
+}
+
+function endGame(survived) {
+  if(syncInterval) clearInterval(syncInterval);
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  if(!idleFrame) idleFrame=requestAnimationFrame(idleLoop);
+  const title=document.getElementById('go-title');
+  const extra=document.getElementById('go-extra');
+  if(survived){
+    title.textContent='🏆 עולם נוקה!';
+    extra.textContent=selectedWorld<4?'🔓 העולם הבא נפתח!':'🌟 ניצחת את כל העולמות!';
+  } else {
+    title.textContent='💥 המשחק הסתיים';
+    extra.textContent='';
+  }
+  document.getElementById('go-score').textContent    =score;
+  document.getElementById('go-crystals').textContent ='+'+sessionCrystals+' 💎 יהלומים נצברו';
+  showScreen('gameover');
+}
+
+/* ═══════════════════════════════════════
+   CANVAS SETUP
+   ═══════════════════════════════════════ */
+function setupCanvas() {
+  dpr=window.devicePixelRatio||1;
+  LW=window.innerWidth; LH=window.innerHeight;
+  canvas.width=LW*dpr; canvas.height=LH*dpr;
+  canvas.style.width='100%'; canvas.style.height='100%';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+window.addEventListener('resize',()=>{
+  const sx=window.innerWidth/LW, sy=window.innerHeight/LH;
+  LW=window.innerWidth; LH=window.innerHeight;
+  if(ship){ship.x*=sx;ship.y*=sy;}
+  if(enemies)      enemies.forEach(e=>{e.x*=sx;e.y*=sy;});
+  if(bullets)      bullets.forEach(b=>{b.x*=sx;b.y*=sy;});
+  if(crystals)     crystals.forEach(c=>{c.x*=sx;c.y*=sy;});
+  if(particles)    particles.forEach(p=>{p.x*=sx;p.y*=sy;});
+  if(enemyBullets) enemyBullets.forEach(b=>{b.x*=sx;b.y*=sy;});
+  if(powerUps)     powerUps.forEach(p=>{p.x*=sx;p.y*=sy;});
+  if(bombBlasts)   bombBlasts.forEach(b=>{b.x*=sx;b.y*=sy;b.r*=(sx+sy)/2;b.maxR*=(sx+sy)/2;});
+  bgScrollY*=sy;
+  setupCanvas(); initVisuals();
+});
+
+/* ═══════════════════════════════════════
+   EVENT LISTENERS
+   ═══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',async()=>{
+  canvas=document.getElementById('gameCanvas');
+  ctx=canvas.getContext('2d',{alpha:false});
+  setupCanvas(); initVisuals();
+  enemies=[]; bullets=[]; crystals=[]; particles=[];
+  enemyBullets=[]; powerUps=[]; bombBlasts=[];
+  idleScrollY=0; idleFrame=requestAnimationFrame(idleLoop);
+  refreshHangar();
+
+  // ── Mode selector ──
+  document.getElementById('btn-mode-single').addEventListener('click',()=>{
+    gameMode='single';
+    startSinglePlayer();
+  });
+  document.getElementById('btn-mode-coop').addEventListener('click',async()=>{
+    gameMode='coop';
+    document.getElementById('mode-selector').style.display='none';
+    document.getElementById('coop-panel').classList.add('visible');
+    await initMedia();
+  });
+  document.getElementById('btn-back-mode').addEventListener('click',()=>{
+    document.getElementById('mode-selector').style.display='';
+    document.getElementById('coop-panel').classList.remove('visible');
+    document.getElementById('lobby-status').textContent='';
+    document.getElementById('lobby-error').textContent='';
+    document.getElementById('room-display').style.display='none';
+  });
+
+  // ── Co-op room buttons ──
+  document.getElementById('btn-create').addEventListener('click',()=>{
+    document.getElementById('lobby-error').textContent=''; createRoom();
+  });
+  document.getElementById('btn-join-go').addEventListener('click',()=>{
+    const code=document.getElementById('join-input').value.trim();
+    if(code.length!==4||isNaN(code)){setLobbyError('הכנס קוד חדר בן 4 ספרות');return;}
+    document.getElementById('lobby-error').textContent=''; joinRoom(code);
+  });
+  document.getElementById('join-input').addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('btn-join-go').click();});
+
+  // ── Role select (coop only) ──
+  document.getElementById('role-nav').addEventListener('click',()=>{
+    if(!isHost) return;
+    localRole='navigator'; applyRoles('navigator','shooter');
+    send({type:'roleAssign',hostRole:'navigator',guestRole:'shooter'});
+  });
+  document.getElementById('role-shoot').addEventListener('click',()=>{
+    if(!isHost) return;
+    localRole='shooter'; applyRoles('shooter','navigator');
+    send({type:'roleAssign',hostRole:'shooter',guestRole:'navigator'});
+  });
+
+  document.getElementById('btn-hangar-from-role').addEventListener('click',()=>{refreshHangar();showScreen('hangar');});
+  document.getElementById('btn-worlds-hangar').addEventListener('click',()=>{refreshHangar();showScreen('hangar');});
+  document.getElementById('btn-worlds-back').addEventListener('click',()=>{
+    // Return to lobby; reset coop panel if needed
+    document.getElementById('mode-selector').style.display='';
+    document.getElementById('coop-panel').classList.remove('visible');
+    showScreen('lobby');
+  });
+
+  document.getElementById('btn-start-game').addEventListener('click',()=>{
+    if(!localRole) return;
+    const weapon=hasWeapon('doubleLaser')?'doubleLaser':'basicLaser';
+    activeWeapon=weapon; initGame(); ship.weapon=weapon;
+    const gr=localRole==='navigator'?'shooter':'navigator';
+    send({type:'startGame',guestRole:gr,weapon,world:selectedWorld});
+    startGameScreen();
+  });
+
+  document.getElementById('btn-buy-double').addEventListener('click',()=>{
+    if(hasWeapon('doubleLaser')){
+      document.getElementById('hangar-msg').textContent='✅ לייזר כפול נבחר!';
+      setTimeout(()=>document.getElementById('hangar-msg').textContent='',2000); return;
+    }
+    const c=loadCrystals();
+    if(c<100){document.getElementById('hangar-msg').textContent='אין מספיק יהלומים!';return;}
+    saveCrystals(c-100); unlockWeapon('doubleLaser');
+    if(gameMode==='coop') send({type:'hangarSync',crystals:loadCrystals(),weapons:loadWeapons()});
+    document.getElementById('hangar-msg').textContent='🎉 לייזר כפול נפתח!';
+    refreshHangar();
+  });
+
+  document.getElementById('btn-hangar-back').addEventListener('click',()=>{
+    if(gameMode==='single') { renderWorldsScreen(); showScreen('worlds'); }
+    else showScreen('role');
+  });
+  document.getElementById('btn-play-again').addEventListener('click',()=>{ renderWorldsScreen(); showScreen('worlds'); });
+  document.getElementById('btn-go-hangar').addEventListener('click',()=>{ refreshHangar(); showScreen('hangar'); });
+});
+</script>
+</body>
+</html>
