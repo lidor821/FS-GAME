@@ -472,9 +472,9 @@ const WORLD_WAVE_DEFS = [
 const WAVE_FRACS = [0.05, 0.2, 0.4, 0.6, 0.8];
 
 const ENEMY_DEFS = {
-  jet_basic:{ hp:1,drop:1,spd:1.0, col:'#4466cc',baseFireInterval:4200 },
-  jet_heavy:{ hp:3,drop:2,spd:.6,  col:'#cc4422',baseFireInterval:2600 },
-  jet_fast: { hp:1,drop:1,spd:1.8, col:'#22ccaa',baseFireInterval:5500 },
+  jet_basic:{ hp:1,drop:1,spd:1.0, col:'#4466cc',baseFireInterval:6000 },
+  jet_heavy:{ hp:3,drop:2,spd:.6,  col:'#cc4422',baseFireInterval:5000 },
+  jet_fast: { hp:1,drop:1,spd:1.8, col:'#22ccaa',baseFireInterval:8000 },
 };
 
 const WEAPONS = {
@@ -881,7 +881,7 @@ function bossFire(boss,ts){
   if(boss.nextFireTime===0){boss.nextFireTime=ts+2200;return;}
   if(ts<boss.nextFireTime) return;
   const spd=LH*.0042;
-  const spread=boss.hp/boss.maxHp<.5?7:5; // more bullets at low HP
+  const spread=boss.hp/boss.maxHp<.5?4:2; // more bullets at low HP
   for(let i=0;i<spread;i++){
     const angle=Math.PI/2+(i-(spread-1)/2)*.28;
     enemyBullets.push(mkEnemyBullet(boss.x,boss.y+boss.r*.5,Math.cos(angle)*spd,Math.sin(angle)*spd));
