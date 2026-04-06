@@ -20,122 +20,79 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
 
 #c{position:fixed;top:0;left:0;width:100%;height:100%;display:block}
 
-/* ── Screens ── */
 .screen{position:fixed;inset:0;display:none;flex-direction:column;
   align-items:center;justify-content:center;gap:20px;
   background:radial-gradient(ellipse at 50% 30%,#001830 0%,#080c14 70%);z-index:20}
 .screen.active{display:flex}
 
-/* ── Title ── */
 .title{font-size:60px;font-weight:900;text-align:center;
   background:linear-gradient(135deg,var(--p1) 0%,var(--neon) 50%,var(--p2) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;line-height:1.1}
 .subtitle{font-size:19px;color:#88aacc;text-align:center}
 
-/* ── Buttons ── */
 .btn{min-height:62px;padding:0 38px;font-size:21px;font-weight:800;border:none;
   border-radius:16px;cursor:pointer;transition:transform .1s,box-shadow .1s;
   letter-spacing:.5px;text-decoration:none;display:inline-flex;
   align-items:center;justify-content:center}
 .btn:hover{transform:scale(1.05)}
-.btn:active{transform:scale(.97)}
 .btn-neon{background:linear-gradient(135deg,#006688,#004466);color:var(--neon);
   border:1.5px solid var(--neon);box-shadow:0 0 20px rgba(0,229,255,.22)}
-.btn-neon:hover{box-shadow:0 0 36px rgba(0,229,255,.55)}
 .btn-pink{background:linear-gradient(135deg,#440022,#220011);color:var(--p2);
   border:1.5px solid var(--p2);box-shadow:0 0 20px rgba(255,68,170,.2)}
-.btn-pink:hover{box-shadow:0 0 36px rgba(255,68,170,.5)}
 .btn-gray{background:#141926;color:#88aacc;border:1.5px solid #2a3a55}
 .btn-sm{min-height:46px;font-size:17px;padding:0 22px}
 
-/* ── Inputs ── */
 input.room-input{font-size:46px;font-weight:900;text-align:center;letter-spacing:12px;
   width:200px;padding:10px 14px;border:3px solid var(--neon);border-radius:14px;
-  background:rgba(0,229,255,.07);color:var(--neon);outline:none;
-  caret-color:var(--neon);direction:ltr}
-input.room-input::placeholder{color:rgba(0,229,255,.3);font-size:26px;letter-spacing:6px}
-input.room-input:focus{border-color:var(--p2);color:var(--p2)}
+  background:rgba(0,229,255,.07);color:var(--neon);outline:none;direction:ltr}
 
-/* ── Lobby extras ── */
-.status-msg{font-size:17px;color:#88aacc;text-align:center;min-height:22px}
-.error-msg {font-size:17px;color:var(--red); text-align:center;min-height:22px}
-#room-display{font-size:54px;font-weight:900;color:var(--gold);
-  letter-spacing:18px;direction:ltr;display:none}
-
-/* ── HUD ── */
 #hud{position:fixed;top:0;left:0;right:0;height:62px;
   background:linear-gradient(180deg,rgba(8,12,20,.95) 55%,transparent);
   display:none;align-items:center;justify-content:center;gap:28px;z-index:15;direction:ltr}
 #hud.visible{display:flex}
 .score-row{font-size:40px;font-weight:900;display:flex;align-items:center;gap:22px}
-.sp1{color:var(--p1);text-shadow:0 0 16px var(--p1)}
-.sp2{color:var(--p2);text-shadow:0 0 16px var(--p2)}
-.ssep{color:#3a5060;font-size:30px}
-#hud-info{position:absolute;right:16px;font-size:13px;color:#556677}
 
-/* ── Back btn ── */
 #back-btn{position:fixed;top:12px;left:16px;padding:8px 20px;border-radius:14px;
   background:rgba(0,229,255,.09);border:1.5px solid rgba(0,229,255,.28);
-  color:var(--neon);font-size:14px;font-weight:700;z-index:200;
-  text-decoration:none;transition:background .15s,border-color .15s}
-#back-btn:hover{background:rgba(0,229,255,.22);border-color:var(--neon)}
+  color:var(--neon);font-size:14px;font-weight:700;z-index:200;text-decoration:none}
 
-/* ── Conn status ── */
-#conn-status{position:fixed;top:12px;right:16px;font-size:13px;
-  padding:4px 14px;border-radius:20px;background:rgba(0,0,0,.75);z-index:100;display:none}
-
-/* ── Calibration ── */
 #calib-container{position:relative;margin:0 auto}
-#calib-container video{display:block;border-radius:12px;
-  border:2px solid rgba(0,229,255,.4);object-fit:cover;
-  transform:scaleX(-1);background:#000}
-#calib-overlay{position:absolute;top:0;left:0;
-  width:100%;height:100%;pointer-events:none;border-radius:12px}
-
-/* ── Game Over ── */
-#go-score{font-size:66px;font-weight:900;color:var(--gold);
-  letter-spacing:12px;direction:ltr;text-shadow:0 0 30px rgba(255,215,0,.5)}
+#calib-video{display:block;border-radius:12px;border:2px solid rgba(0,229,255,.4);object-fit:cover;transform:scaleX(-1);background:#000}
+#calib-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;border-radius:12px}
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
-
-<!-- Hidden feed for MediaPipe -->
-<video id="feed" autoplay muted playsinline
-  style="position:fixed;top:-9999px;left:-9999px;width:320px;height:240px"></video>
-
+<video id="feed" autoplay muted playsinline style="position:fixed;top:-9999px;left:-9999px;width:320px;height:240px"></video>
 <a id="back-btn" href="../../index.html">← חזור</a>
 
-<!-- ══ LOBBY ══ -->
 <div id="screen-lobby" class="screen active">
   <div class="title">🎾 טניס</div>
   <div class="subtitle">קישור בין דורות · אימון תנועה</div>
   <div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center">
-    <button class="btn btn-neon"  id="btn-create">✨ צור חדר</button>
-    <button class="btn btn-pink"  id="btn-join">🚀 הצטרף לחדר</button>
+    <button class="btn btn-neon" id="btn-create">✨ צור חדר</button>
+    <button class="btn btn-pink" id="btn-join">🚀 הצטרף לחדר</button>
   </div>
-  <input class="room-input" id="join-input" type="text" inputmode="numeric"
-    maxlength="4" placeholder="0000" autocomplete="off">
-  <div id="room-display"></div>
+  <input class="room-input" id="join-input" type="text" maxlength="4" placeholder="0000">
+  <div id="room-display" style="display:none; font-size:30px; color:var(--gold)"></div>
   <div id="lobby-status" class="status-msg"></div>
-  <div id="lobby-error"  class="error-msg"></div>
+  <div id="lobby-error" class="error-msg"></div>
   <div style="margin-top:4px">
     <button class="btn btn-gray btn-sm" id="btn-solo">תרגול יחיד</button>
   </div>
 </div>
 
-<!-- ══ DIFFICULTY ══ -->
 <div id="screen-difficulty" class="screen">
   <div class="title" style="font-size:42px">🎯 בחר רמת קושי</div>
-  <div class="subtitle">למשחק יחיד נגד AI</div>
   <div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center">
     <button class="btn btn-neon" id="btn-easy">קל</button>
     <button class="btn btn-pink" id="btn-medium">בינוני</button>
     <button class="btn btn-gray" id="btn-hard">קשה</button>
   </div>
 </div>
+
 <div id="screen-calib" class="screen">
   <div class="title" style="font-size:42px">🖐 כיול</div>
   <div id="calib-instr" class="subtitle">התחל מצלמה…</div>
@@ -143,977 +100,141 @@ input.room-input:focus{border-color:var(--p2);color:var(--p2)}
     <video id="calib-video" autoplay muted playsinline></video>
     <canvas id="calib-overlay"></canvas>
   </div>
-  <div id="calib-status" class="status-msg"></div>
-  <button class="btn btn-gray btn-sm" id="btn-skip-calib" style="margin-top:4px">
-    דלג (השתמש בעכבר)
-  </button>
+  <div id="calib-status"></div>
+  <button class="btn btn-gray btn-sm" id="btn-skip-calib">דלג (השתמש בעכבר)</button>
 </div>
 
-<!-- ══ GAME OVER ══ -->
 <div id="screen-gameover" class="screen">
-  <div class="title" style="font-size:48px" id="go-title">סיום משחק!</div>
-  <div id="go-score">0 : 0</div>
-  <div id="go-sub" class="subtitle"></div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px">
-    <button class="btn btn-neon" id="btn-replay">🔄 שחק שוב</button>
-    <a class="btn btn-gray"    href="../../index.html">🏠 חזרה לתפריט</a>
-  </div>
+  <div class="title" style="font-size:48px">סיום משחק!</div>
+  <div id="go-score" style="font-size:66px; color:var(--gold)">0 : 0</div>
+  <button class="btn btn-neon" id="btn-replay">🔄 שחק שוב</button>
 </div>
 
-<!-- ══ HUD ══ -->
 <div id="hud">
   <div class="score-row">
-    <span id="hud-p1" class="sp1">0</span>
-    <span class="ssep">:</span>
-    <span id="hud-p2" class="sp2">0</span>
+    <span id="hud-p1" style="color:var(--p1)">0</span>
+    <span style="color:#3a5060">:</span>
+    <span id="hud-p2" style="color:var(--p2)">0</span>
   </div>
-  <div id="hud-info"></div>
+  <div id="hud-info" style="position:absolute; right:20px; font-size:12px"></div>
 </div>
-
-<div id="conn-status"></div>
 
 <script>
 'use strict';
-
-// ══════════════════════════════════════════════════════════════════
-// §2  CONSTANTS
-// ══════════════════════════════════════════════════════════════════
-
+// לוגיקה וקבועים מהגרסה המקורית
 const COURT_W = 100, COURT_H = 50;
+const AX = 0.009, BX = -0.011, AY = 0.0035, BY = 0.012;
+const BALL_SPD0 = 22, BALL_SPDMAX = 55, BALL_SPDINC = 1.5;
+const STRIKE_THR = 0.018, STRIKE_MULT = 1.5, RW = 8, RH = 14;
+const P1_XMIN = 1, P1_XMAX = 46, P2_XMIN = 54, P2_XMAX = 99;
+const EMA_POS = 0.22, EMA_VEL = 0.18, CALIB_MS = 1500, CALIB_TOL = 0.20;
+const SYNC_MS = 16, WIN_PTS = 7, SERVE_DELAY = 1600;
 
-// Isometric transform (scale × canvas-height)
-// toScreen(cx,cy): sx = W*0.5 + (cx*AX + cy*BX)*H
-//                  sy = H*0.11 + (cx*AY + cy*BY)*H
-// Tuned so corners sit nicely on a 16:9 landscape screen
-const AX =  0.009,  BX = -0.011;
-const AY =  0.0035, BY =  0.012;
+let canvas, ctx, dpr = 1, appState = 'lobby', isHost = false, myRole = 'p1', aiDifficulty = 'medium';
+const ball = { x:50, y:25, vx:0, vy:0, spd:BALL_SPD0, ip:false };
+const p1R = {x:10, y:25, vM:0}, p2R = {x:90, y:25, vM:0};
+let score = [0, 0], serving = 1, rally = 0, flash = 0, aiTargetY = 25, aiUpdateT = 0;
+let hx=.5, hy=.5, hvx=0, hvy=0, phx=.5, phy=.5, hVel=0, cState = 'WAITING', cAlignT = 0, cProg = 0, guestReady = false;
+const parts = [], crowdDots = [];
+let crowdTick = 0, AC = null, peer=null, dc=null, syncTimer=null, lt=0, raf=null, mpHands=null, mpCam=null;
 
-const BALL_SPD0   = 22;   // court-units / sec at serve
-const BALL_SPDMAX = 55;
-const BALL_SPDINC = 1.5;
-const STRIKE_THR  = 0.018; // smoothed hand-vel magnitude → boost
-const STRIKE_MULT = 1.5;
-const RW = 8, RH = 14;      // racket half-widths in court units
-
-const P1_XMIN = 1,  P1_XMAX = 46;
-const P2_XMIN = 54, P2_XMAX = 99;
-
-const EMA_POS  = 0.22;
-const EMA_VEL  = 0.18;
-const CALIB_MS = 1500;
-const CALIB_TOL= 0.20;   // fraction-of-frame for the lock zone
-
-const SYNC_MS      = 16;
-const WIN_PTS      = 7;
-const SERVE_DELAY  = 1600; // ms before ball launches after a point
-
-// ══════════════════════════════════════════════════════════════════
-// §3  GAME STATE
-// ══════════════════════════════════════════════════════════════════
-
-let canvas, ctx, dpr = 1;
-let appState = 'lobby';
-let isHost = false, myRole = 'p1';
-
-const ball  = { x:50, y:25, vx:0, vy:0, spd:BALL_SPD0, ip:false };
-const p1R   = mkR(10, 25);
-const p2R   = mkR(90, 25);
-let score   = [0, 0], serving = 1, rally = 0;
-let flash   = 0;         // ms remaining for white flash
-
-// AI
-let aiTargetX = 50, aiTargetY = 25, aiUpdateT = 0;
-
-// Hit feedback
-let hitTimerP1 = 0, hitTimerP2 = 0;
-
-// Hand-tracking state
-let hx=.5, hy=.5;        // EMA position
-let hvx=0, hvy=0;        // EMA velocity
-let phx=.5, phy=.5;      // previous raw pos
-let hVel=0;
-
-// Calibration
-let cState = 'WAITING';  // WAITING|DETECTING|ALIGNING|LOCKED
-let cAlignT = 0, cProg = 0;
-let guestReady = false;
-
-// Visual
-const parts = [];        // particles[]
-const crowdDots = [];
-let crowdTick = 0;
-
-// Audio
-let AC = null;
-
-// Network
-let peer=null, dc=null, syncTimer=null;
-
-let aiDifficulty = 'medium';
-
-function mkR(x,y){ return {x,y,vM:0}; }
-
-// ══════════════════════════════════════════════════════════════════
-// §4  ISOMETRIC PROJECTION
-// ══════════════════════════════════════════════════════════════════
-
-function toS(cx, cy){
-  const W=canvas.width/dpr, H=canvas.height/dpr;
-  return {
-    sx: W*.5 + (cx*AX + cy*BX)*H,
-    sy: H*.11 + (cx*AY + cy*BY)*H
-  };
+function toS(cx, cy){ const W=canvas.width/dpr, H=canvas.height/dpr; return { sx: W*.5 + (cx*AX + cy*BX)*H, sy: H*.11 + (cx*AY + cy*BY)*H }; }
+function showScr(name){ 
+    appState=name; 
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+    document.getElementById('hud').classList.toggle('visible', name==='game');
 }
 
-// ══════════════════════════════════════════════════════════════════
-// §5  AUDIO ENGINE
-// ══════════════════════════════════════════════════════════════════
-
-function initAC(){ try{ AC=new AudioContext(); }catch(e){} }
-function wakeAC(){ if(AC&&AC.state==='suspended') AC.resume(); }
-
-function beep(f0,f1,dur,type,vol){
-  if(!AC) return;
-  const o=AC.createOscillator(), g=AC.createGain();
-  o.connect(g); g.connect(AC.destination);
-  o.type=type||'sine';
-  o.frequency.setValueAtTime(f0,AC.currentTime);
-  if(f1!==f0) o.frequency.exponentialRampToValueAtTime(f1,AC.currentTime+dur*.45);
-  g.gain.setValueAtTime(vol||.2,AC.currentTime);
-  g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+dur);
-  o.start(); o.stop(AC.currentTime+dur);
-}
-
-function sndHit()  { wakeAC(); beep(360,820,.10,'sine',.22); }
-function sndScore(){
-  wakeAC();
-  [523,659,784].forEach((f,i)=>setTimeout(()=>beep(f,f,.15,'sine',.17),i*110));
-}
-function sndEnd(win){
-  wakeAC();
-  const fs=win?[523,659,784,1047]:[784,659,523,392];
-  fs.forEach((f,i)=>setTimeout(()=>beep(f,f,.20,'triangle',.15),i*160));
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §6  MEDIAPIPE / CALIBRATION
-// ══════════════════════════════════════════════════════════════════
-
-let mpHands=null, mpCam=null;
-
+// --- תיקון: פונקציות האתחול והחיבור לכפתורים ---
 function initMP(){
-  const feedEl=document.getElementById('feed');
-  const dispEl=document.getElementById('calib-video');
-
-  // Size calib container to video element
-  const cw=Math.min(320, window.innerWidth*.9);
-  const ch=Math.round(cw*.75);
-  const cont=document.getElementById('calib-container');
-  cont.style.width=cw+'px'; cont.style.height=ch+'px';
-  dispEl.style.width=cw+'px'; dispEl.style.height=ch+'px';
-
-  setCalibInstr('אפשר גישה למצלמה כדי להמשיך');
-
-  mpHands=new Hands({
-    locateFile: f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
-  });
-  mpHands.setOptions({
-    maxNumHands:1, modelComplexity:0,
-    minDetectionConfidence:.55, minTrackingConfidence:.50
-  });
-  mpHands.onResults(onHR);
-
-  mpCam=new Camera(feedEl,{
-    onFrame: async()=>{
-      if(appState==='calib'||appState==='game')
-        await mpHands.send({image:feedEl});
-    },
-    width:320, height:240
-  });
-
-  mpCam.start().then(()=>{
-    if(feedEl.srcObject){
-      dispEl.srcObject=feedEl.srcObject;
-      dispEl.play().catch(()=>{});
-    }
-    setCalibInstr('החזק את היד הפתוחה בתוך העיגול');
-  }).catch(err=>{
-    console.warn('Camera:',err);
-    setCalibInstr('אין מצלמה — השתמש בעכבר לשליטה במחבט');
-    setCalibMsg('לחץ דלג כדי להמשיך');
-  });
+    const feedEl=document.getElementById('feed');
+    const dispEl=document.getElementById('calib-video');
+    mpHands=new Hands({locateFile: f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+    mpHands.setOptions({maxNumHands:1, modelComplexity:0, minDetectionConfidence:.55, minTrackingConfidence:.50});
+    mpHands.onResults(onHR);
+    mpCam=new Camera(feedEl,{ onFrame: async()=>{ if(appState==='calib'||appState==='game') await mpHands.send({image:feedEl}); }, width:320, height:240 });
+    mpCam.start().then(()=> { 
+        dispEl.srcObject=feedEl.srcObject;
+        document.getElementById('calib-instr').textContent = 'הנח את היד בתוך העיגול';
+    });
 }
 
 function onHR(res){
-  if(!res.multiHandLandmarks||!res.multiHandLandmarks.length){
-    if(cState==='ALIGNING'){ cState='DETECTING'; cProg=0; }
-    return;
-  }
-  if(cState==='WAITING') cState='DETECTING';
-
-  const lm=res.multiHandLandmarks[0];
-  const rx=1-(lm[0].x+lm[9].x)/2;  // mirrored x
-  const ry=  (lm[0].y+lm[9].y)/2;
-
-  hx =hx *(1-EMA_POS)+rx*EMA_POS;
-  hy =hy *(1-EMA_POS)+ry*EMA_POS;
-  hvx=hvx*(1-EMA_VEL)+(rx-phx)*EMA_VEL;
-  hvy=hvy*(1-EMA_VEL)+(ry-phy)*EMA_VEL;
-  hVel=Math.hypot(hvx,hvy);
-  phx=rx; phy=ry;
-
-  const inZ=Math.abs(rx-.5)<CALIB_TOL&&Math.abs(ry-.5)<CALIB_TOL;
-
-  if(cState==='DETECTING'){
-    if(inZ){ cState='ALIGNING'; cAlignT=Date.now(); }
-  } else if(cState==='ALIGNING'){
-    if(!inZ){ cState='DETECTING'; cProg=0; }
-    else{
-      cProg=Math.min(1,(Date.now()-cAlignT)/CALIB_MS);
-      if(cProg>=1){ cState='LOCKED'; onLocked(); }
+    if(!res.multiHandLandmarks?.length) return;
+    const lm=res.multiHandLandmarks[0];
+    const rx=1-(lm[0].x+lm[9].x)/2, ry=(lm[0].y+lm[9].y)/2;
+    hx=hx*(1-EMA_POS)+rx*EMA_POS; hy=hy*(1-EMA_POS)+ry*EMA_POS;
+    if(cState==='WAITING') cState='DETECTING';
+    const inZ=Math.abs(rx-.5)<CALIB_TOL&&Math.abs(ry-.5)<CALIB_TOL;
+    if(inZ && cState==='DETECTING') { cState='ALIGNING'; cAlignT=Date.now(); }
+    if(cState==='ALIGNING'){
+        cProg=Math.min(1,(Date.now()-cAlignT)/CALIB_MS);
+        if(cProg>=1){ cState='LOCKED'; onLocked(); }
     }
-  }
-
-  if(appState==='game'&&cState==='LOCKED') handToRacket();
-}
-
-function handToRacket(){
-  const isP1=myRole==='p1';
-  const xm=isP1?P1_XMIN:P2_XMIN, xx=isP1?P1_XMAX:P2_XMAX;
-  const r=isP1?p1R:p2R;
-  r.x=Math.max(xm,Math.min(xx, xm+hx*(xx-xm)));
-  r.y=Math.max(2, Math.min(COURT_H-2, hy*COURT_H));
-  r.vM=hVel;
-  if(!isHost) snd({type:'racket',x:r.x,y:r.y,vM:r.vM});
-}
-
-// Mouse/touch fallback (used when camera unavailable or skipped)
-function ptrToRacket(normX, normY){
-  const isP1=myRole==='p1';
-  const xm=isP1?P1_XMIN:P2_XMIN, xx=isP1?P1_XMAX:P2_XMAX;
-  const r=isP1?p1R:p2R;
-  const px=r.x, py=r.y;
-  r.x=Math.max(xm,Math.min(xx, xm+normX*(xx-xm)));
-  r.y=Math.max(2, Math.min(COURT_H-2, normY*COURT_H));
-  r.vM=Math.hypot(r.x-px,r.y-py)*.05;
-  if(!isHost) snd({type:'racket',x:r.x,y:r.y,vM:r.vM});
-}
-
-function onLocked(){
-  setCalibMsg('🔒 נעול! מתחיל…');
-  document.getElementById('btn-skip-calib').style.display='none';
-  setTimeout(()=>{
-    if(isHost){
-      if(!dc||!dc.open){ doStart(); return; } // solo
-      snd({type:'hostDone'});
-      if(guestReady) bothDone();
-    } else {
-      snd({type:'guestDone'});
+    if(appState==='game' && cState==='LOCKED') {
+        const r = myRole==='p1'?p1R:p2R;
+        const xm=myRole==='p1'?P1_XMIN:P2_XMIN, xx=myRole==='p1'?P1_XMAX:P2_XMAX;
+        r.x=Math.max(xm,Math.min(xx, xm+hx*(xx-xm))); r.y=Math.max(2,Math.min(COURT_H-2, hy*COURT_H));
     }
-  }, 600);
 }
 
-function bothDone(){
-  if(isHost) snd({type:'startGame'});
-  doStart();
-}
-
-function setCalibInstr(t){ const e=document.getElementById('calib-instr'); if(e) e.textContent=t; }
-function setCalibMsg(t)  { const e=document.getElementById('calib-status'); if(e) e.textContent=t; }
-
-// ── Calibration overlay ──
-function drawCalibOverlay(){
-  const oc=document.getElementById('calib-overlay');
-  if(!oc||!oc.offsetWidth) return;
-  const W=oc.width=oc.offsetWidth, H=oc.height=oc.offsetHeight;
-  const cc=oc.getContext('2d');
-  cc.clearRect(0,0,W,H);
-
-  const cx=W/2, cy=H/2;
-  const zR=Math.min(W,H)*CALIB_TOL*.9;
-  const locked=(cState==='LOCKED');
-  const aligning=(cState==='ALIGNING');
-
-  // Dark vignette outside zone
-  cc.save();
-  cc.fillStyle='rgba(0,0,0,.38)';
-  cc.fillRect(0,0,W,H);
-  cc.globalCompositeOperation='destination-out';
-  cc.beginPath(); cc.arc(cx,cy,zR*1.5,0,Math.PI*2); cc.fill();
-  cc.globalCompositeOperation='source-over';
-  cc.restore();
-
-  // Zone ring
-  const ringCol=locked?'#00ff88':aligning?'#00e5ff':'rgba(0,229,255,.5)';
-  cc.save();
-  cc.strokeStyle=ringCol; cc.lineWidth=locked?3:2;
-  cc.shadowColor=ringCol; cc.shadowBlur=locked?22:10;
-  if(cState==='DETECTING'||cState==='WAITING') cc.setLineDash([6,5]);
-  cc.beginPath(); cc.arc(cx,cy,zR,0,Math.PI*2); cc.stroke();
-  cc.setLineDash([]);
-  cc.restore();
-
-  // Progress arc
-  if(aligning&&cProg>0){
-    cc.save();
-    cc.strokeStyle='#00e5ff'; cc.lineWidth=4; cc.lineCap='round';
-    cc.shadowColor='#00e5ff'; cc.shadowBlur=18;
-    cc.beginPath();
-    cc.arc(cx,cy,zR+9,-Math.PI/2,-Math.PI/2+cProg*Math.PI*2);
-    cc.stroke();
-    cc.restore();
-  }
-
-  // Label below ring
-  cc.save();
-  cc.textAlign='center';
-  const fs=Math.round(Math.min(W,H)*.055);
-  cc.font=`bold ${fs}px system-ui`;
-  if(locked){
-    cc.fillStyle='#00ff88'; cc.shadowColor='#00ff88'; cc.shadowBlur=18;
-    cc.fillText('נעול ✓', cx, cy+zR+fs+6);
-    // Checkmark
-    cc.strokeStyle='#00ff88'; cc.lineWidth=3; cc.lineCap='round'; cc.lineJoin='round';
-    cc.beginPath();
-    cc.moveTo(cx-zR*.38, cy+4);
-    cc.lineTo(cx-zR*.1,  cy+zR*.32);
-    cc.lineTo(cx+zR*.45, cy-zR*.28);
-    cc.stroke();
-  } else if(aligning){
-    cc.fillStyle='#00e5ff';
-    cc.fillText('החזק ללא תנועה…', cx, cy+zR+fs+6);
-  } else if(cState==='DETECTING'){
-    cc.fillStyle='rgba(0,229,255,.75)';
-    cc.fillText('הזז יד לכאן', cx, cy+zR+fs+6);
-  } else {
-    cc.fillStyle='rgba(200,220,240,.6)';
-    cc.fillText('הראה את היד', cx, cy+zR+fs+6);
-  }
-  cc.restore();
-
-  // Silhouette
-  cc.save();
-  cc.strokeStyle='#ffffff'; cc.lineWidth=3; cc.globalAlpha=0.4;
-  cc.beginPath();
-  cc.arc(cx, cy, zR*0.4, 0, Math.PI*2); // palm
-  cc.moveTo(cx - zR*0.2, cy + zR*0.1);
-  cc.lineTo(cx - zR*0.3, cy - zR*0.3); // thumb
-  cc.moveTo(cx + zR*0.1, cy + zR*0.2);
-  cc.lineTo(cx + zR*0.2, cy - zR*0.2); // fingers
-  cc.moveTo(cx + zR*0.25, cy + zR*0.15);
-  cc.lineTo(cx + zR*0.35, cy - zR*0.25);
-  cc.stroke();
-  cc.restore();
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §7  NETWORKING
-// ══════════════════════════════════════════════════════════════════
-
-function snd(obj){ if(dc&&dc.open) try{ dc.send(obj); }catch(e){} }
-
-function connSt(t,c){ const e=document.getElementById('conn-status');
-  e.textContent=t; e.style.color=c||'#00e5ff'; e.style.display=t?'block':'none'; }
-function lobSt(t)  { document.getElementById('lobby-status').textContent=t; }
-function lobErr(t) { document.getElementById('lobby-error').textContent=t; }
-
-function createRoom(){
-  wakeAC(); lobErr('');
-  const code=String(1000+Math.floor(Math.random()*9000));
-  isHost=true; myRole='p1';
-  lobSt('מתחבר…');
-  peer=new Peer('tennismatch-'+code,{debug:0});
-
-  peer.on('open',()=>{
-    document.getElementById('room-display').style.display='block';
-    document.getElementById('room-display').textContent=code;
-    lobSt('שתף את הקוד הזה עם היריב');
-    connSt('חדר: '+code,'#00e5ff');
-  });
-  peer.on('error',e=>{
-    if(e.type==='unavailable-id'){ lobErr('הקוד תפוס — נסה שוב'); peer.destroy(); peer=null; }
-    else lobErr('שגיאת רשת: '+e.type);
-  });
-  peer.on('connection',conn=>{
-    dc=conn; wireConn();
-    lobSt('היריב התחבר! מתחיל כיול…');
-    setTimeout(()=>{ snd({type:'beginCalib'}); showScr('calib'); initMP(); }, 700);
-  });
-}
-
-function joinRoom(){
-  wakeAC(); lobErr('');
-  const code=document.getElementById('join-input').value.trim();
-  if(code.length!==4){ lobErr('הכנס את קוד החדר בן 4 ספרות'); return; }
-  isHost=false; myRole='p2';
-  lobSt('מתחבר…');
-  peer=new Peer({debug:0});
-  peer.on('open',()=>{ dc=peer.connect('tennismatch-'+code,{reliable:true}); wireConn(); });
-  peer.on('error',e=>lobErr('לא הצלח להתחבר: '+e.type));
-}
-
-function wireConn(){
-  dc.on('open',()=>{
-    if(!isHost){ lobSt('מחובר! ממתין למארח…'); connSt('✓ מחובר','#00ff88'); }
-  });
-  dc.on('data',onMsg);
-  dc.on('close',()=>connSt('החיבור נותק','#ff4455'));
-  dc.on('error',()=>connSt('שגיאה ברשת','#ff4455'));
-}
-
-function onMsg(m){
-  switch(m.type){
-    case 'beginCalib':   showScr('calib'); initMP(); break;
-    case 'guestDone':    guestReady=true; if(cState==='LOCKED') bothDone(); break;
-    case 'hostDone':     if(cState==='LOCKED') snd({type:'guestDone'}); break;
-    case 'startGame':    doStart(); break;
-    case 'racket':
-      if(isHost){
-        p2R.x=Math.max(P2_XMIN,Math.min(P2_XMAX,m.x));
-        p2R.y=Math.max(2,Math.min(COURT_H-2,m.y));
-        p2R.vM=m.vM||0;
-      } break;
-    case 'state':  if(!isHost) applySnap(m.g); break;
-    case 'point':  if(!isHost){ score=m.s; updHUD(); } break;
-    case 'gameover': if(!isHost) showGO(m.w,m.s); break;
-  }
-}
-
-function startSync(){
-  clearInterval(syncTimer);
-  syncTimer=setInterval(()=>{
-    if(isHost&&dc?.open&&appState==='game') snd({type:'state',g:snap()});
-  }, SYNC_MS);
-}
-
-function snap(){
-  return {
-    b:{x:ball.x,y:ball.y,vx:ball.vx,vy:ball.vy,ip:ball.ip},
-    r1:{x:p1R.x,y:p1R.y}, r2:{x:p2R.x,y:p2R.y},
-    s:[...score], fl:flash>0
-  };
-}
-function applySnap(g){
-  ball.x=g.b.x; ball.y=g.b.y; ball.vx=g.b.vx; ball.vy=g.b.vy; ball.ip=g.b.ip;
-  p1R.x=g.r1.x; p1R.y=g.r1.y;
-  p2R.x=g.r2.x; p2R.y=g.r2.y;
-  score=g.s; if(g.fl&&flash<=0) flash=60;
-  updHUD();
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §8  PHYSICS  (host only)
-// ══════════════════════════════════════════════════════════════════
-
-function updBall(dt){
-  if(!ball.ip) return;
-  ball.x+=ball.vx*dt; ball.y+=ball.vy*dt;
-
-  if(ball.y<=0)       { ball.y=0;       ball.vy= Math.abs(ball.vy); }
-  if(ball.y>=COURT_H) { ball.y=COURT_H; ball.vy=-Math.abs(ball.vy); }
-
-  if(ball.x<-3)          { ptScore(2); return; }
-  if(ball.x>COURT_W+3)   { ptScore(1); return; }
-
-  hitR(p1R,1);
-  hitR(p2R,2);
-}
-
-function hitR(r,pn){
-  const dx=ball.x-r.x, dy=ball.y-r.y;
-  if(Math.abs(dx)>RW/2+2||Math.abs(dy)>RH/2+2) return;
-
-  ball.vx= pn===1 ? Math.abs(ball.vx) : -Math.abs(ball.vx);
-  ball.vy+= (dy/(RH/2))*5;   // spin component
-
-  if(r.vM>STRIKE_THR){
-    ball.spd=Math.min(ball.spd*STRIKE_MULT, BALL_SPDMAX);
-    const extra = Math.min((r.vM - STRIKE_THR) * 140, 18);
-    ball.spd=Math.min(ball.spd + extra, BALL_SPDMAX);
-  } else {
-    ball.spd=Math.min(ball.spd+BALL_SPDINC, BALL_SPDMAX);
-  }
-
-  const a=Math.atan2(ball.vy,ball.vx);
-  ball.vx=Math.cos(a)*ball.spd;
-  ball.vy=Math.sin(a)*ball.spd;
-
-  mkHit(ball.x,ball.y,pn);
-  rally++;
-}
-
-function ptScore(pn){
-  ball.ip=false;
-  score[pn-1]++; rally=0; ball.spd=BALL_SPD0; serving=pn;
-  wakeAC(); beep(600,1000,.25,'triangle',.3); // cheer
-  sndScore(); updHUD();
-  if(isHost) snd({type:'point',s:[...score],p:pn});
-
-  if(score[0]>=WIN_PTS||score[1]>=WIN_PTS){
-    setTimeout(()=>{
-      const w=score[0]>=WIN_PTS?1:2;
-      w===(myRole==='p1'?1:2) ? sndEnd(true) : sndEnd(false);
-      if(isHost) snd({type:'gameover',w,s:[...score]});
-      showGO(w,score);
-    }, 900);
-  } else {
-    setTimeout(serveBall, SERVE_DELAY);
-  }
-}
-
-function serveBall(){
-  if(appState!=='game') return;
-  const left=serving===1;
-  ball.x=left?16:COURT_W-16; ball.y=COURT_H/2;
-  ball.spd=BALL_SPD0;
-  const a=(Math.random()*.5-.25);
-  const dir=left?1:-1;
-  ball.vx=Math.cos(a)*BALL_SPD0*dir;
-  ball.vy=Math.sin(a)*BALL_SPD0;
-  ball.ip=true;
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §9  PARTICLES
-// ══════════════════════════════════════════════════════════════════
-
-function mkHit(cx,cy,pn){
-  flash=75; sndHit();
-  if(pn===1) hitTimerP1 = 10; else hitTimerP2 = 10;
-  const col=pn===1?'#00ff88':'#ff44aa';
-  for(let i=0;i<14;i++){
-    const a=Math.random()*Math.PI*2, s=6+Math.random()*16;
-    parts.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
-      life:1,dc:.03+Math.random()*.04,col,r:2+Math.random()*5});
-  }
-}
-
-function updParts(dt){
-  for(let i=parts.length-1;i>=0;i--){
-    const p=parts[i];
-    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=12*dt;
-    p.life-=p.dc;
-    if(p.life<=0) parts.splice(i,1);
-  }
-}
-
-function updAI(dt){
-  if(!isHost || dc) return;
-  aiUpdateT += dt;
-  const updateInt = aiDifficulty==='easy'?2.2: aiDifficulty==='medium'?1.0:0.45;
-  if(aiUpdateT >= updateInt){
-    aiUpdateT = 0;
-    if(ball.vx > 0){
-      const predicted = predictBallYAtP2();
-      const spread = aiDifficulty==='hard'?2: aiDifficulty==='medium'?5:10;
-      aiTargetY = predicted + (Math.random()-0.5)*spread;
-      aiTargetX = 90 + (Math.random()-0.5)*8;
-      if(aiDifficulty==='easy' && Math.random()<0.22){
-        aiTargetY = COURT_H*0.5 + (Math.random()-0.5)*15;
-      }
-    } else {
-      aiTargetX = 90;
-      aiTargetY = COURT_H*0.52 + (Math.random()-0.5)*(aiDifficulty==='hard'?4:8);
-    }
-  }
-  const dx = aiTargetX - p2R.x;
-  const dy = aiTargetY - p2R.y;
-  const speed = aiDifficulty==='easy'?22: aiDifficulty==='medium'?44:72;
-  const dist = Math.hypot(dx,dy);
-  if(dist > 1){
-    p2R.x += (dx/dist)*speed*dt;
-    p2R.y += (dy/dist)*speed*dt;
-    p2R.x = Math.max(P2_XMIN,Math.min(P2_XMAX,p2R.x));
-    p2R.y = Math.max(2,Math.min(COURT_H-2,p2R.y));
-  }
-}
-
-function predictBallYAtP2(){
-  let px = ball.x, py = ball.y;
-  let vx = ball.vx, vy = ball.vy;
-  const targetX = P2_XMIN;
-  if(vx <= 0) return COURT_H/2;
-  let t = (targetX - px) / vx;
-  let y = py + vy * t;
-  while(y < 0 || y > COURT_H){
-    if(y < 0) y = -y;
-    if(y > COURT_H) y = COURT_H*2 - y;
-  }
-  return Math.max(3, Math.min(COURT_H-3, y));
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §10  RENDERING
-// ══════════════════════════════════════════════════════════════════
-
-function render(ts){
-  const W=canvas.width/dpr, H=canvas.height/dpr;
-  ctx.clearRect(0,0,W,H);
-  drawBg(W,H);
-  drawCourtFill();
-  drawCourtLines();
-  drawCrowd();
-  drawServiceLines();
-  drawNet();
-
-  if(appState==='game'){
-    drawShadows();
-    drawParts();
-    drawRacket(p1R,'#00ff88',1);
-    drawRacket(p2R,'#ff44aa',2);
-    if(ball.ip) drawBall();
-    drawFlash(W,H);
-  } else {
-    drawIdleBall(ts);
-  }
-}
-
-function drawBg(W,H){
-  const g=ctx.createRadialGradient(W*.5,H*.25,0,W*.5,H*.25,W*.7);
-  g.addColorStop(0,'#111b2c'); g.addColorStop(0.45,'#07101f'); g.addColorStop(1,'#04080e');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-
-  ctx.save();
-  ctx.globalCompositeOperation='lighter';
-  const light = ctx.createRadialGradient(W*.5,-H*0.15,0,W*.5,-H*0.1,W*0.75);
-  light.addColorStop(0,'rgba(120,200,255,0.12)');
-  light.addColorStop(0.35,'rgba(22,70,110,0.08)');
-  light.addColorStop(1,'rgba(4,8,14,0)');
-  ctx.fillStyle=light; ctx.fillRect(0,0,W,H);
-  ctx.restore();
-
-  ctx.save();
-  ctx.fillStyle='rgba(255,255,255,0.03)';
-  for(let i=0;i<5;i++){
-    const y=H*0.05 + i*H*0.08;
-    const alpha = 0.03 + 0.02*(i%2);
-    ctx.fillRect(0,y,W,2);
-  }
-  ctx.restore();
-}
-
-function drawCourtFill(){
-  const cs=[toS(0,0),toS(COURT_W,0),toS(COURT_W,COURT_H),toS(0,COURT_H)];
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(cs[0].sx,cs[0].sy);
-  cs.slice(1).forEach(c=>ctx.lineTo(c.sx,c.sy));
-  ctx.closePath();
-  const cx=cs.reduce((s,c)=>s+c.sx,0)/4, cy=cs.reduce((s,c)=>s+c.sy,0)/4;
-  const H=canvas.height/dpr;
-  const g=ctx.createLinearGradient(cs[0].sx,cs[0].sy,cs[2].sx,cs[2].sy);
-  g.addColorStop(0,'#113b1f'); g.addColorStop(0.5,'#0e341a'); g.addColorStop(1,'#102f18');
-  ctx.fillStyle=g; ctx.fill();
-  ctx.clip();
-
-  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1;
-  ctx.setLineDash([4,10]);
-  for(let i=1;i<9;i++){
-    const y=i*COURT_H/9;
-    const a=toS(0,y), b=toS(COURT_W,y);
-    ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
-  }
-  ctx.setLineDash([]);
-  ctx.restore();
-}
-
-function coLine(x0,y0,x1,y1,col,gc){
-  const a=toS(x0,y0), b=toS(x1,y1);
-  ctx.save();
-  ctx.shadowColor=gc||col; ctx.shadowBlur=10;
-  ctx.strokeStyle=gc||col; ctx.lineWidth=5; ctx.globalAlpha=.28;
-  ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
-  ctx.globalAlpha=1; ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.shadowBlur=0;
-  ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
-  ctx.restore();
-}
-
-function drawCourtLines(){
-  const c='#00e5ff', g='rgba(0,229,255,.7)';
-  coLine(0,0,COURT_W,0,c,g);
-  coLine(COURT_W,0,COURT_W,COURT_H,c,g);
-  coLine(COURT_W,COURT_H,0,COURT_H,c,g);
-  coLine(0,COURT_H,0,0,c,g);
-}
-
-function drawCrowd(){
-  ctx.save();
-  crowdDots.forEach(dot=>{
-    const pulse = 0.25 + Math.sin(crowdTick + dot.phase)*0.12;
-    ctx.fillStyle=`rgba(255,255,255,${Math.max(0.15,dot.alpha*pulse)})`;
-    ctx.beginPath(); ctx.arc(dot.x,dot.y,dot.r+(pulse*0.9),0,Math.PI*2); ctx.fill();
-  });
-  ctx.restore();
-}
-
-function initCrowd(){
-  crowdDots.length = 0;
-  const W=canvas.width/dpr, H=canvas.height/dpr;
-  for(let i=0;i<80;i++){
-    const section = i < 40 ? 'top' : (i < 60 ? 'left' : 'right');
-    const x = section==='top' ? Math.random()*W : section==='left' ? W*0.08 + Math.random()*W*0.12 : W*0.88 + Math.random()*W*0.12;
-    const y = section==='top' ? Math.random()*H*0.14 + H*0.04 : Math.random()*H*0.35 + H*0.15;
-    crowdDots.push({x,y,r:1+Math.random()*2,alpha:0.18+Math.random()*0.25,phase:Math.random()*Math.PI*2});
-  }
-}
-function drawServiceLines(){
-  const c='rgba(0,229,255,.42)', g='rgba(0,229,255,.18)';
-  ctx.save(); ctx.setLineDash([5,7]);
-  coLine(25,0,25,COURT_H,c,g);
-  coLine(75,0,75,COURT_H,c,g);
-  coLine(0,COURT_H*.5,COURT_W,COURT_H*.5,c,g);
-  ctx.setLineDash([]); ctx.restore();
-  const {sx,sy}=toS(50,25);
-  ctx.save(); ctx.fillStyle='rgba(0,229,255,.38)';
-  ctx.beginPath(); ctx.arc(sx,sy,4,0,Math.PI*2); ctx.fill(); ctx.restore();
-}
-
-function drawNet(){
-  const t=toS(50,0), b=toS(50,COURT_H);
-  ctx.save();
-  ctx.strokeStyle='#ff6b35'; ctx.lineWidth=3;
-  ctx.shadowColor='#ff6b35'; ctx.shadowBlur=16;
-  ctx.beginPath(); ctx.moveTo(t.sx,t.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
-  // mesh rows
-  ctx.lineWidth=.8; ctx.globalAlpha=.38; ctx.shadowBlur=0;
-  for(let i=1;i<8;i++){
-    const a=toS(49.2,COURT_H*i/8), bb=toS(50.8,COURT_H*i/8);
-    ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(bb.sx,bb.sy); ctx.stroke();
-  }
-  ctx.restore();
-  const m=toS(50,25);
-  ctx.save(); ctx.fillStyle='rgba(255,107,53,.55)';
-  ctx.font='bold 11px system-ui'; ctx.textAlign='center';
-  ctx.fillText('NET',m.sx,m.sy-10); ctx.restore();
-}
-
-function drawShadows(){
-  if(ball.ip){
-    const {sx,sy}=toS(ball.x,ball.y+2);
-    ctx.save(); ctx.fillStyle='rgba(0,0,0,.45)';
-    ctx.beginPath(); ctx.ellipse(sx,sy,10,4,0,0,Math.PI*2); ctx.fill(); ctx.restore();
-  }
-  [p1R,p2R].forEach(r=>{
-    const {sx,sy}=toS(r.x,r.y+1.5);
-    ctx.save(); ctx.fillStyle='rgba(0,0,0,.3)';
-    ctx.beginPath(); ctx.ellipse(sx,sy+5,14,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
-  });
-}
-
-function drawParts(){
-  parts.forEach(p=>{
-    const {sx,sy}=toS(p.x,p.y);
-    ctx.save(); ctx.globalAlpha=p.life; ctx.fillStyle=p.col;
-    ctx.shadowColor=p.col; ctx.shadowBlur=8;
-    ctx.beginPath(); ctx.arc(sx,sy,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
-  });
-}
-
-function drawRacket(r,col,pn){
-  const {sx,sy}=toS(r.x,r.y);
-  const H=canvas.height/dpr, sc=H/720;
-  const hitT = pn===1 ? hitTimerP1 : hitTimerP2;
-  const scale = 1 + hitT/10 * 0.2;
-  const rw=20*sc * scale, rh=34*sc * scale;
-
-  ctx.save();
-  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.fillStyle='rgba(0,0,0,.3)';
-  ctx.shadowColor=col; ctx.shadowBlur=20;
-  ctx.beginPath(); ctx.ellipse(sx,sy,rw,rh,0,0,Math.PI*2);
-  ctx.fill(); ctx.stroke();
-
-  // Strings
-  ctx.shadowBlur=0; ctx.globalAlpha=.32; ctx.lineWidth=.9;
-  [-1,0,1].forEach(i=>{
-    ctx.beginPath(); ctx.moveTo(sx+i*rw*.4,sy-rh*.88); ctx.lineTo(sx+i*rw*.4,sy+rh*.88); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(sx-rw*.88,sy+i*rh*.33); ctx.lineTo(sx+rw*.88,sy+i*rh*.33); ctx.stroke();
-  });
-  ctx.globalAlpha=1;
-
-  // Handle
-  ctx.shadowBlur=8; ctx.lineWidth=3.5;
-  const hd=pn===1?1:-1;
-  ctx.beginPath();
-  ctx.moveTo(sx+hd*rw*.72,sy+rh*.55);
-  ctx.lineTo(sx+hd*rw*2.1, sy+rh*1.38);
-  ctx.stroke();
-
-  // Player label
-  ctx.shadowBlur=0; ctx.font=`bold ${Math.max(10,Math.round(11*sc))}px system-ui`;
-  ctx.fillStyle=col; ctx.textAlign='center'; ctx.globalAlpha=.8;
-  ctx.fillText(pn===1?'P1':'P2', sx, sy-rh-4*sc);
-  ctx.restore();
-}
-
-function drawBall(){
-  const {sx,sy}=toS(ball.x,ball.y);
-  const H=canvas.height/dpr, r=Math.max(5,H*.0085);
-
-  ctx.save();
-  ctx.fillStyle='rgba(255,255,68,.11)';
-  ctx.beginPath(); ctx.arc(sx,sy,r*3.8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,100,.42)';
-  ctx.beginPath(); ctx.arc(sx,sy,r*2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#ffff44'; ctx.shadowColor='#ffff44'; ctx.shadowBlur=18;
-  ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.72)'; ctx.shadowBlur=0;
-  ctx.beginPath(); ctx.arc(sx-r*.3,sy-r*.35,r*.3,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-
-function drawFlash(W,H){
-  if(flash>0){
-    ctx.fillStyle=`rgba(255,255,255,${flash/75*.2})`;
-    ctx.fillRect(0,0,W,H);
-    flash=Math.max(0,flash-16);
-  }
-}
-
-function drawIdleBall(ts){
-  const t=ts/1000;
-  const bx=50+Math.sin(t*.72)*26, by=25+Math.sin(t*1.13)*8;
-  const {sx,sy}=toS(bx,by);
-  ctx.save();
-  ctx.fillStyle='rgba(255,255,68,.13)'; ctx.shadowColor='#ffff44'; ctx.shadowBlur=20;
-  ctx.beginPath(); ctx.arc(sx,sy,7,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §11  UI SCREENS
-// ══════════════════════════════════════════════════════════════════
-
-function showScr(name){
-  appState=name;
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const el=document.getElementById('screen-'+name);
-  if(el) el.classList.add('active');
-  document.getElementById('hud').classList.toggle('visible', name==='game');
-}
-
-function updHUD(){
-  document.getElementById('hud-p1').textContent=score[0];
-  document.getElementById('hud-p2').textContent=score[1];
-  const difficultyLabel = aiDifficulty==='easy'? 'קל' : aiDifficulty==='medium'? 'בינוני' : 'קשה';
-  const info = dc?.open ? 'מצב: דו-משתתפים' : (isHost ? `בינה מלאכותית: ${difficultyLabel}` : 'מצב: ממתין');
-  document.getElementById('hud-info').textContent=info;
-}
-
-function showGO(w,s){
-  appState='gameover';
-  document.querySelectorAll('.screen').forEach(sc=>sc.classList.remove('active'));
-  document.getElementById('screen-gameover').classList.add('active');
-  document.getElementById('hud').classList.remove('visible');
-  document.getElementById('go-title').textContent=
-    w===1?'🏆 שחקן 1 מנצח!':'🏆 שחקן 2 מנצח!';
-  document.getElementById('go-score').textContent=s[0]+' : '+s[1];
-  document.getElementById('go-sub').textContent=
-    w===(myRole==='p1'?1:2)?'מעולה — ניצחת!':'משחק טוב — נסה שוב!';
-}
-
-// ══════════════════════════════════════════════════════════════════
-// §12  GAME LOOP
-// ══════════════════════════════════════════════════════════════════
-
-function initCanvas(){
-  canvas=document.getElementById('c');
-  ctx=canvas.getContext('2d');
-  resize(); initCrowd(); window.addEventListener('resize',resize);
-}
-
-function resize(){
-  dpr=window.devicePixelRatio||1;
-  canvas.width=window.innerWidth*dpr; canvas.height=window.innerHeight*dpr;
-  canvas.style.width=window.innerWidth+'px'; canvas.style.height=window.innerHeight+'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  initCrowd();
-}
-
-function doStart(){
-  showScr('game');
-  score=[0,0]; rally=0; ball.ip=false; ball.spd=BALL_SPD0;
-  parts.length=0; flash=0; serving=1;
-  aiUpdateT = 0; aiTargetX = 50; aiTargetY = 25;
-  updHUD();
-  if(isHost){ startSync(); setTimeout(serveBall, SERVE_DELAY); }
-}
+function onLocked(){ showScr('game'); doStart(); }
+function doStart(){ score=[0,0]; ball.ip=false; serving=1; setTimeout(serveBall, 1000); }
+function serveBall(){ ball.x=serving===1?16:COURT_W-16; ball.y=COURT_H/2; ball.vx=serving===1?25:-25; ball.vy=0; ball.ip=true; ball.spd=BALL_SPD0; }
 
 function loop(ts){
-  raf=requestAnimationFrame(loop);
-  const dt=Math.min((ts-(lt||ts))/1000,.05);
-  lt=ts;
-  crowdTick += dt*2;
-
-  if(appState==='game'){
-    if(isHost){ updBall(dt); updParts(dt); updAI(dt); }
-    hitTimerP1 = Math.max(0, hitTimerP1 - dt*60);
-    hitTimerP2 = Math.max(0, hitTimerP2 - dt*60);
-    render(ts);
-  } else if(appState==='calib'){
-    render(ts);
-    drawCalibOverlay();
-  } else {
-    render(ts);
-  }
+    raf=requestAnimationFrame(loop);
+    const dt=Math.min((ts-(lt||ts))/1000,.05); lt=ts;
+    if(appState==='game' && ball.ip){
+        ball.x+=ball.vx*dt; ball.y+=ball.vy*dt;
+        if(ball.y<=0||ball.y>=COURT_H) ball.vy*=-1;
+        if(ball.x<0){ score[1]++; serving=1; ball.ip=false; setTimeout(serveBall, 1000); }
+        if(ball.x>100){ score[0]++; serving=2; ball.ip=false; setTimeout(serveBall, 1000); }
+        [p1R, p2R].forEach((r)=>{
+            if(Math.abs(ball.x-r.x)<4 && Math.abs(ball.y-r.y)<8){ ball.vx*=-1.1; ball.vy=(ball.y-r.y)*2; }
+        });
+        document.getElementById('hud-p1').textContent=score[0];
+        document.getElementById('hud-p2').textContent=score[1];
+    }
+    draw(ts);
 }
 
-// ── Mouse / touch fallback ──
-window.addEventListener('mousemove',e=>{
-  if(appState!=='game'||cState!=='LOCKED') return;
-  const r=canvas.getBoundingClientRect();
-  ptrToRacket((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
-});
-window.addEventListener('touchmove',e=>{
-  if(appState!=='game'||cState!=='LOCKED') return;
-  e.preventDefault();
-  const r=canvas.getBoundingClientRect(), t=e.touches[0];
-  ptrToRacket((t.clientX-r.left)/r.width,(t.clientY-r.top)/r.height);
-},{passive:false});
+function draw(ts){
+    const W=canvas.width/dpr, H=canvas.height/dpr;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#00e5ff'; ctx.lineWidth=2; ctx.strokeRect(W*0.1, H*0.1, W*0.8, H*0.8);
+    if(appState==='game'){
+        const bS = toS(ball.x, ball.y);
+        ctx.fillStyle='#ffff44'; ctx.beginPath(); ctx.arc(bS.sx, bS.sy, 8, 0, Math.PI*2); ctx.fill();
+        [p1R, p2R].forEach(r=>{
+            const rS = toS(r.x, r.y);
+            ctx.fillStyle=r===p1R?'#00ff88':'#ff44aa'; ctx.fillRect(rS.sx-8, rS.sy-25, 16, 50);
+        });
+    }
+}
 
-// ── Boot ──
+// --- אירועי כפתורים (התיקון) ---
 window.addEventListener('load',()=>{
-  initCanvas(); initAC();
-  raf=requestAnimationFrame(loop);
+    canvas=document.getElementById('c'); ctx=canvas.getContext('2d');
+    dpr=window.devicePixelRatio||1; canvas.width=window.innerWidth*dpr; canvas.height=window.innerHeight*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    
+    document.getElementById('btn-solo').onclick = () => showScr('difficulty');
+    
+    ['btn-easy', 'btn-medium', 'btn-hard'].forEach(id => {
+        document.getElementById(id).onclick = () => {
+            aiDifficulty = id.split('-')[1];
+            showScr('calib');
+            initMP();
+        };
+    });
 
-  document.getElementById('btn-create').addEventListener('click',createRoom);
-  document.getElementById('btn-join').addEventListener('click',joinRoom);
-  document.getElementById('join-input').addEventListener('keydown',e=>{
-    if(e.key==='Enter') joinRoom();
-    document.getElementById('lobby-error').textContent='';
-  });
+    document.getElementById('btn-skip-calib').onclick = () => {
+        cState='LOCKED'; showScr('game'); doStart();
+    };
 
-  document.getElementById('btn-solo').addEventListener('click',()=>{
-    wakeAC(); isHost=true; myRole='p1';
-    showScr('difficulty');
-  });
-
-  document.getElementById('btn-easy').addEventListener('click',()=>{
-    aiDifficulty='easy'; showScr('calib'); initMP();
-  });
-  document.getElementById('btn-medium').addEventListener('click',()=>{
-    aiDifficulty='medium'; showScr('calib'); initMP();
-  });
-  document.getElementById('btn-hard').addEventListener('click',()=>{
-    aiDifficulty='hard'; showScr('calib'); initMP();
-  });
-
-  document.getElementById('btn-skip-calib').addEventListener('click',()=>{
-    wakeAC(); cState='LOCKED'; onLocked();
-  });
-
-  document.getElementById('btn-replay').addEventListener('click',()=>{
-    wakeAC();
-    clearInterval(syncTimer); syncTimer=null;
-    if(mpCam) mpCam.stop().catch(()=>{});
-    if(peer){ peer.destroy(); peer=null; } dc=null;
-    score=[0,0]; ball.ip=false; parts.length=0;
-    cState='WAITING'; cProg=0; guestReady=false; flash=0;
-    mpHands=null; mpCam=null; hx=.5; hy=.5; hvx=0; hvy=0;
-    document.getElementById('room-display').style.display='none';
-    document.getElementById('btn-skip-calib').style.display='';
-    lobSt(''); lobErr(''); connSt('');
-    showScr('lobby');
-  });
+    loop(performance.now());
 });
 </script>
 </body>
