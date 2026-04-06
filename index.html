@@ -203,11 +203,25 @@ input.room-input:focus { border-color:var(--cyan); color:var(--cyan); }
 /* ── Coop panel (shown after mode choice) ── */
 #coop-panel { display:none; flex-direction:column; align-items:center; gap:16px; }
 #coop-panel.visible { display:flex; }
+
+/* ── Back to Hub button ── */
+#btn-back-to-hub {
+  position:fixed; top:14px; left:16px;
+  padding:10px 20px; border-radius:14px; font-size:15px; font-weight:800;
+  background:rgba(20,0,40,.82); border:1.5px solid rgba(255,128,255,.35);
+  color:#cc88ff; text-decoration:none; z-index:200;
+  transition:background .15s,border-color .15s,color .15s;
+  direction:ltr; white-space:nowrap;
+}
+#btn-back-to-hub:hover {
+  background:rgba(224,64,251,.22); border-color:var(--pink); color:var(--white);
+}
 </style>
 </head>
 <body>
 
 <canvas id="gameCanvas"></canvas>
+<a id="btn-back-to-hub" href="../../index.html">← תפריט ראשי</a>
 
 <!-- ══ לובי ══ -->
 <div id="screen-lobby" class="screen active">
