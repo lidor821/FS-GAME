@@ -917,6 +917,7 @@ function loop(ts){
 }
 
 // ── Mouse / touch fallback ──
+// Mouse/touch fallback — only active when hand tracking is NOT locked
 window.addEventListener('mousemove',e=>{
   if(appState!=='game'||cState==='LOCKED') return;
   const r=canvas.getBoundingClientRect();
