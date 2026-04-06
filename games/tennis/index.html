@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>🎾 Tennis — Motion Control</title>
+<title>🎾 טניס — בקרת תנועה</title>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -106,15 +106,15 @@ input.room-input:focus{border-color:var(--p2);color:var(--p2)}
 <video id="feed" autoplay muted playsinline
   style="position:fixed;top:-9999px;left:-9999px;width:320px;height:240px"></video>
 
-<a id="back-btn" href="../../index.html">← Menu</a>
+<a id="back-btn" href="../../index.html">← חזור</a>
 
 <!-- ══ LOBBY ══ -->
 <div id="screen-lobby" class="screen active">
-  <div class="title">🎾 Tennis</div>
-  <div class="subtitle">Multiplayer · Motion Control</div>
+  <div class="title">🎾 טניס</div>
+  <div class="subtitle">קישור בין דורות · אימון תנועה</div>
   <div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center">
-    <button class="btn btn-neon"  id="btn-create">✨ Create Room</button>
-    <button class="btn btn-pink"  id="btn-join">🚀 Join Room</button>
+    <button class="btn btn-neon"  id="btn-create">✨ צור חדר</button>
+    <button class="btn btn-pink"  id="btn-join">🚀 הצטרף לחדר</button>
   </div>
   <input class="room-input" id="join-input" type="text" inputmode="numeric"
     maxlength="4" placeholder="0000" autocomplete="off">
@@ -122,32 +122,41 @@ input.room-input:focus{border-color:var(--p2);color:var(--p2)}
   <div id="lobby-status" class="status-msg"></div>
   <div id="lobby-error"  class="error-msg"></div>
   <div style="margin-top:4px">
-    <button class="btn btn-gray btn-sm" id="btn-solo">Solo Practice (test)</button>
+    <button class="btn btn-gray btn-sm" id="btn-solo">תרגול יחיד</button>
   </div>
 </div>
 
-<!-- ══ CALIBRATION ══ -->
+<!-- ══ DIFFICULTY ══ -->
+<div id="screen-difficulty" class="screen">
+  <div class="title" style="font-size:42px">🎯 בחר רמת קושי</div>
+  <div class="subtitle">למשחק יחיד נגד AI</div>
+  <div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center">
+    <button class="btn btn-neon" id="btn-easy">קל</button>
+    <button class="btn btn-pink" id="btn-medium">בינוני</button>
+    <button class="btn btn-gray" id="btn-hard">קשה</button>
+  </div>
+</div>
 <div id="screen-calib" class="screen">
-  <div class="title" style="font-size:42px">🖐 Calibrate</div>
-  <div id="calib-instr" class="subtitle">Starting camera…</div>
+  <div class="title" style="font-size:42px">🖐 כיול</div>
+  <div id="calib-instr" class="subtitle">התחל מצלמה…</div>
   <div id="calib-container">
     <video id="calib-video" autoplay muted playsinline></video>
     <canvas id="calib-overlay"></canvas>
   </div>
   <div id="calib-status" class="status-msg"></div>
   <button class="btn btn-gray btn-sm" id="btn-skip-calib" style="margin-top:4px">
-    Skip (use mouse)
+    דלג (השתמש בעכבר)
   </button>
 </div>
 
 <!-- ══ GAME OVER ══ -->
 <div id="screen-gameover" class="screen">
-  <div class="title" style="font-size:48px" id="go-title">Game Over!</div>
+  <div class="title" style="font-size:48px" id="go-title">סיום משחק!</div>
   <div id="go-score">0 : 0</div>
   <div id="go-sub" class="subtitle"></div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px">
-    <button class="btn btn-neon" id="btn-replay">🔄 Play Again</button>
-    <a class="btn btn-gray"    href="../../index.html">🏠 Back to Menu</a>
+    <button class="btn btn-neon" id="btn-replay">🔄 שחק שוב</button>
+    <a class="btn btn-gray"    href="../../index.html">🏠 חזרה לתפריט</a>
   </div>
 </div>
 
@@ -176,8 +185,8 @@ const COURT_W = 100, COURT_H = 50;
 // toScreen(cx,cy): sx = W*0.5 + (cx*AX + cy*BX)*H
 //                  sy = H*0.11 + (cx*AY + cy*BY)*H
 // Tuned so corners sit nicely on a 16:9 landscape screen
-const AX =  0.0071,  BX = -0.0086;
-const AY =  0.0029,  BY =  0.0100;
+const AX =  0.009,  BX = -0.011;
+const AY =  0.0035, BY =  0.012;
 
 const BALL_SPD0   = 22;   // court-units / sec at serve
 const BALL_SPDMAX = 55;
@@ -212,6 +221,12 @@ const p2R   = mkR(90, 25);
 let score   = [0, 0], serving = 1, rally = 0;
 let flash   = 0;         // ms remaining for white flash
 
+// AI
+let aiTargetX = 50, aiTargetY = 25, aiUpdateT = 0;
+
+// Hit feedback
+let hitTimerP1 = 0, hitTimerP2 = 0;
+
 // Hand-tracking state
 let hx=.5, hy=.5;        // EMA position
 let hvx=0, hvy=0;        // EMA velocity
@@ -225,6 +240,8 @@ let guestReady = false;
 
 // Visual
 const parts = [];        // particles[]
+const crowdDots = [];
+let crowdTick = 0;
 
 // Audio
 let AC = null;
@@ -232,8 +249,7 @@ let AC = null;
 // Network
 let peer=null, dc=null, syncTimer=null;
 
-// Loop
-let lt=0, raf=null;
+let aiDifficulty = 'medium';
 
 function mkR(x,y){ return {x,y,vM:0}; }
 
@@ -296,7 +312,7 @@ function initMP(){
   cont.style.width=cw+'px'; cont.style.height=ch+'px';
   dispEl.style.width=cw+'px'; dispEl.style.height=ch+'px';
 
-  setCalibInstr('Allow camera access to continue');
+  setCalibInstr('אפשר גישה למצלמה כדי להמשיך');
 
   mpHands=new Hands({
     locateFile: f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
@@ -320,11 +336,11 @@ function initMP(){
       dispEl.srcObject=feedEl.srcObject;
       dispEl.play().catch(()=>{});
     }
-    setCalibInstr('Hold your open hand inside the circle');
+    setCalibInstr('החזק את היד הפתוחה בתוך העיגול');
   }).catch(err=>{
     console.warn('Camera:',err);
-    setCalibInstr('No camera — use your mouse to control the racket');
-    setCalibMsg('Click Skip to continue');
+    setCalibInstr('אין מצלמה — השתמש בעכבר לשליטה במחבט');
+    setCalibMsg('לחץ דלג כדי להמשיך');
   });
 }
 
@@ -384,7 +400,7 @@ function ptrToRacket(normX, normY){
 }
 
 function onLocked(){
-  setCalibMsg('🔒 Locked! Starting…');
+  setCalibMsg('🔒 נעול! מתחיל…');
   document.getElementById('btn-skip-calib').style.display='none';
   setTimeout(()=>{
     if(isHost){
@@ -455,7 +471,7 @@ function drawCalibOverlay(){
   cc.font=`bold ${fs}px system-ui`;
   if(locked){
     cc.fillStyle='#00ff88'; cc.shadowColor='#00ff88'; cc.shadowBlur=18;
-    cc.fillText('LOCKED ✓', cx, cy+zR+fs+6);
+    cc.fillText('נעול ✓', cx, cy+zR+fs+6);
     // Checkmark
     cc.strokeStyle='#00ff88'; cc.lineWidth=3; cc.lineCap='round'; cc.lineJoin='round';
     cc.beginPath();
@@ -465,14 +481,28 @@ function drawCalibOverlay(){
     cc.stroke();
   } else if(aligning){
     cc.fillStyle='#00e5ff';
-    cc.fillText('Hold still…', cx, cy+zR+fs+6);
+    cc.fillText('החזק ללא תנועה…', cx, cy+zR+fs+6);
   } else if(cState==='DETECTING'){
     cc.fillStyle='rgba(0,229,255,.75)';
-    cc.fillText('Move hand here', cx, cy+zR+fs+6);
+    cc.fillText('הזז יד לכאן', cx, cy+zR+fs+6);
   } else {
     cc.fillStyle='rgba(200,220,240,.6)';
-    cc.fillText('Show your hand', cx, cy+zR+fs+6);
+    cc.fillText('הראה את היד', cx, cy+zR+fs+6);
   }
+  cc.restore();
+
+  // Silhouette
+  cc.save();
+  cc.strokeStyle='#ffffff'; cc.lineWidth=3; cc.globalAlpha=0.4;
+  cc.beginPath();
+  cc.arc(cx, cy, zR*0.4, 0, Math.PI*2); // palm
+  cc.moveTo(cx - zR*0.2, cy + zR*0.1);
+  cc.lineTo(cx - zR*0.3, cy - zR*0.3); // thumb
+  cc.moveTo(cx + zR*0.1, cy + zR*0.2);
+  cc.lineTo(cx + zR*0.2, cy - zR*0.2); // fingers
+  cc.moveTo(cx + zR*0.25, cy + zR*0.15);
+  cc.lineTo(cx + zR*0.35, cy - zR*0.25);
+  cc.stroke();
   cc.restore();
 }
 
@@ -491,22 +521,22 @@ function createRoom(){
   wakeAC(); lobErr('');
   const code=String(1000+Math.floor(Math.random()*9000));
   isHost=true; myRole='p1';
-  lobSt('Connecting…');
+  lobSt('מתחבר…');
   peer=new Peer('tennismatch-'+code,{debug:0});
 
   peer.on('open',()=>{
     document.getElementById('room-display').style.display='block';
     document.getElementById('room-display').textContent=code;
-    lobSt('Share this code with your opponent');
-    connSt('Room: '+code,'#00e5ff');
+    lobSt('שתף את הקוד הזה עם היריב');
+    connSt('חדר: '+code,'#00e5ff');
   });
   peer.on('error',e=>{
-    if(e.type==='unavailable-id'){ lobErr('Code taken — try again'); peer.destroy(); peer=null; }
-    else lobErr('Network error: '+e.type);
+    if(e.type==='unavailable-id'){ lobErr('הקוד תפוס — נסה שוב'); peer.destroy(); peer=null; }
+    else lobErr('שגיאת רשת: '+e.type);
   });
   peer.on('connection',conn=>{
     dc=conn; wireConn();
-    lobSt('Opponent connected! Starting calibration…');
+    lobSt('היריב התחבר! מתחיל כיול…');
     setTimeout(()=>{ snd({type:'beginCalib'}); showScr('calib'); initMP(); }, 700);
   });
 }
@@ -514,21 +544,21 @@ function createRoom(){
 function joinRoom(){
   wakeAC(); lobErr('');
   const code=document.getElementById('join-input').value.trim();
-  if(code.length!==4){ lobErr('Enter the 4-digit room code'); return; }
+  if(code.length!==4){ lobErr('הכנס את קוד החדר בן 4 ספרות'); return; }
   isHost=false; myRole='p2';
-  lobSt('Connecting…');
+  lobSt('מתחבר…');
   peer=new Peer({debug:0});
   peer.on('open',()=>{ dc=peer.connect('tennismatch-'+code,{reliable:true}); wireConn(); });
-  peer.on('error',e=>lobErr('Could not connect: '+e.type));
+  peer.on('error',e=>lobErr('לא הצלח להתחבר: '+e.type));
 }
 
 function wireConn(){
   dc.on('open',()=>{
-    if(!isHost){ lobSt('Connected! Waiting for host…'); connSt('✓ Connected','#00ff88'); }
+    if(!isHost){ lobSt('מחובר! ממתין למארח…'); connSt('✓ מחובר','#00ff88'); }
   });
   dc.on('data',onMsg);
-  dc.on('close',()=>connSt('Disconnected','#ff4455'));
-  dc.on('error',()=>connSt('Error','#ff4455'));
+  dc.on('close',()=>connSt('החיבור נותק','#ff4455'));
+  dc.on('error',()=>connSt('שגיאה ברשת','#ff4455'));
 }
 
 function onMsg(m){
@@ -596,8 +626,13 @@ function hitR(r,pn){
   ball.vx= pn===1 ? Math.abs(ball.vx) : -Math.abs(ball.vx);
   ball.vy+= (dy/(RH/2))*5;   // spin component
 
-  if(r.vM>STRIKE_THR) ball.spd=Math.min(ball.spd*STRIKE_MULT, BALL_SPDMAX);
-  else                ball.spd=Math.min(ball.spd+BALL_SPDINC,  BALL_SPDMAX);
+  if(r.vM>STRIKE_THR){
+    ball.spd=Math.min(ball.spd*STRIKE_MULT, BALL_SPDMAX);
+    const extra = Math.min((r.vM - STRIKE_THR) * 140, 18);
+    ball.spd=Math.min(ball.spd + extra, BALL_SPDMAX);
+  } else {
+    ball.spd=Math.min(ball.spd+BALL_SPDINC, BALL_SPDMAX);
+  }
 
   const a=Math.atan2(ball.vy,ball.vx);
   ball.vx=Math.cos(a)*ball.spd;
@@ -610,6 +645,7 @@ function hitR(r,pn){
 function ptScore(pn){
   ball.ip=false;
   score[pn-1]++; rally=0; ball.spd=BALL_SPD0; serving=pn;
+  wakeAC(); beep(600,1000,.25,'triangle',.3); // cheer
   sndScore(); updHUD();
   if(isHost) snd({type:'point',s:[...score],p:pn});
 
@@ -643,6 +679,7 @@ function serveBall(){
 
 function mkHit(cx,cy,pn){
   flash=75; sndHit();
+  if(pn===1) hitTimerP1 = 10; else hitTimerP2 = 10;
   const col=pn===1?'#00ff88':'#ff44aa';
   for(let i=0;i<14;i++){
     const a=Math.random()*Math.PI*2, s=6+Math.random()*16;
@@ -660,6 +697,51 @@ function updParts(dt){
   }
 }
 
+function updAI(dt){
+  if(!isHost || dc) return;
+  aiUpdateT += dt;
+  const updateInt = aiDifficulty==='easy'?2.2: aiDifficulty==='medium'?1.0:0.45;
+  if(aiUpdateT >= updateInt){
+    aiUpdateT = 0;
+    if(ball.vx > 0){
+      const predicted = predictBallYAtP2();
+      const spread = aiDifficulty==='hard'?2: aiDifficulty==='medium'?5:10;
+      aiTargetY = predicted + (Math.random()-0.5)*spread;
+      aiTargetX = 90 + (Math.random()-0.5)*8;
+      if(aiDifficulty==='easy' && Math.random()<0.22){
+        aiTargetY = COURT_H*0.5 + (Math.random()-0.5)*15;
+      }
+    } else {
+      aiTargetX = 90;
+      aiTargetY = COURT_H*0.52 + (Math.random()-0.5)*(aiDifficulty==='hard'?4:8);
+    }
+  }
+  const dx = aiTargetX - p2R.x;
+  const dy = aiTargetY - p2R.y;
+  const speed = aiDifficulty==='easy'?22: aiDifficulty==='medium'?44:72;
+  const dist = Math.hypot(dx,dy);
+  if(dist > 1){
+    p2R.x += (dx/dist)*speed*dt;
+    p2R.y += (dy/dist)*speed*dt;
+    p2R.x = Math.max(P2_XMIN,Math.min(P2_XMAX,p2R.x));
+    p2R.y = Math.max(2,Math.min(COURT_H-2,p2R.y));
+  }
+}
+
+function predictBallYAtP2(){
+  let px = ball.x, py = ball.y;
+  let vx = ball.vx, vy = ball.vy;
+  const targetX = P2_XMIN;
+  if(vx <= 0) return COURT_H/2;
+  let t = (targetX - px) / vx;
+  let y = py + vy * t;
+  while(y < 0 || y > COURT_H){
+    if(y < 0) y = -y;
+    if(y > COURT_H) y = COURT_H*2 - y;
+  }
+  return Math.max(3, Math.min(COURT_H-3, y));
+}
+
 // ══════════════════════════════════════════════════════════════════
 // §10  RENDERING
 // ══════════════════════════════════════════════════════════════════
@@ -670,6 +752,7 @@ function render(ts){
   drawBg(W,H);
   drawCourtFill();
   drawCourtLines();
+  drawCrowd();
   drawServiceLines();
   drawNet();
 
@@ -686,9 +769,27 @@ function render(ts){
 }
 
 function drawBg(W,H){
-  const g=ctx.createRadialGradient(W*.5,H*.28,0,W*.5,H*.28,W*.65);
-  g.addColorStop(0,'#0a1525'); g.addColorStop(1,'#080c14');
+  const g=ctx.createRadialGradient(W*.5,H*.25,0,W*.5,H*.25,W*.7);
+  g.addColorStop(0,'#111b2c'); g.addColorStop(0.45,'#07101f'); g.addColorStop(1,'#04080e');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  const light = ctx.createRadialGradient(W*.5,-H*0.15,0,W*.5,-H*0.1,W*0.75);
+  light.addColorStop(0,'rgba(120,200,255,0.12)');
+  light.addColorStop(0.35,'rgba(22,70,110,0.08)');
+  light.addColorStop(1,'rgba(4,8,14,0)');
+  ctx.fillStyle=light; ctx.fillRect(0,0,W,H);
+  ctx.restore();
+
+  ctx.save();
+  ctx.fillStyle='rgba(255,255,255,0.03)';
+  for(let i=0;i<5;i++){
+    const y=H*0.05 + i*H*0.08;
+    const alpha = 0.03 + 0.02*(i%2);
+    ctx.fillRect(0,y,W,2);
+  }
+  ctx.restore();
 }
 
 function drawCourtFill(){
@@ -700,9 +801,19 @@ function drawCourtFill(){
   ctx.closePath();
   const cx=cs.reduce((s,c)=>s+c.sx,0)/4, cy=cs.reduce((s,c)=>s+c.sy,0)/4;
   const H=canvas.height/dpr;
-  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,H*.55);
-  g.addColorStop(0,'#0d2038'); g.addColorStop(1,'#080e1c');
+  const g=ctx.createLinearGradient(cs[0].sx,cs[0].sy,cs[2].sx,cs[2].sy);
+  g.addColorStop(0,'#113b1f'); g.addColorStop(0.5,'#0e341a'); g.addColorStop(1,'#102f18');
   ctx.fillStyle=g; ctx.fill();
+  ctx.clip();
+
+  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1;
+  ctx.setLineDash([4,10]);
+  for(let i=1;i<9;i++){
+    const y=i*COURT_H/9;
+    const a=toS(0,y), b=toS(COURT_W,y);
+    ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+  }
+  ctx.setLineDash([]);
   ctx.restore();
 }
 
@@ -725,6 +836,26 @@ function drawCourtLines(){
   coLine(0,COURT_H,0,0,c,g);
 }
 
+function drawCrowd(){
+  ctx.save();
+  crowdDots.forEach(dot=>{
+    const pulse = 0.25 + Math.sin(crowdTick + dot.phase)*0.12;
+    ctx.fillStyle=`rgba(255,255,255,${Math.max(0.15,dot.alpha*pulse)})`;
+    ctx.beginPath(); ctx.arc(dot.x,dot.y,dot.r+(pulse*0.9),0,Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function initCrowd(){
+  crowdDots.length = 0;
+  const W=canvas.width/dpr, H=canvas.height/dpr;
+  for(let i=0;i<80;i++){
+    const section = i < 40 ? 'top' : (i < 60 ? 'left' : 'right');
+    const x = section==='top' ? Math.random()*W : section==='left' ? W*0.08 + Math.random()*W*0.12 : W*0.88 + Math.random()*W*0.12;
+    const y = section==='top' ? Math.random()*H*0.14 + H*0.04 : Math.random()*H*0.35 + H*0.15;
+    crowdDots.push({x,y,r:1+Math.random()*2,alpha:0.18+Math.random()*0.25,phase:Math.random()*Math.PI*2});
+  }
+}
 function drawServiceLines(){
   const c='rgba(0,229,255,.42)', g='rgba(0,229,255,.18)';
   ctx.save(); ctx.setLineDash([5,7]);
@@ -781,7 +912,9 @@ function drawParts(){
 function drawRacket(r,col,pn){
   const {sx,sy}=toS(r.x,r.y);
   const H=canvas.height/dpr, sc=H/720;
-  const rw=20*sc, rh=34*sc;
+  const hitT = pn===1 ? hitTimerP1 : hitTimerP2;
+  const scale = 1 + hitT/10 * 0.2;
+  const rw=20*sc * scale, rh=34*sc * scale;
 
   ctx.save();
   ctx.strokeStyle=col; ctx.lineWidth=2; ctx.fillStyle='rgba(0,0,0,.3)';
@@ -861,6 +994,9 @@ function showScr(name){
 function updHUD(){
   document.getElementById('hud-p1').textContent=score[0];
   document.getElementById('hud-p2').textContent=score[1];
+  const difficultyLabel = aiDifficulty==='easy'? 'קל' : aiDifficulty==='medium'? 'בינוני' : 'קשה';
+  const info = dc?.open ? 'מצב: דו-משתתפים' : (isHost ? `בינה מלאכותית: ${difficultyLabel}` : 'מצב: ממתין');
+  document.getElementById('hud-info').textContent=info;
 }
 
 function showGO(w,s){
@@ -869,10 +1005,10 @@ function showGO(w,s){
   document.getElementById('screen-gameover').classList.add('active');
   document.getElementById('hud').classList.remove('visible');
   document.getElementById('go-title').textContent=
-    w===1?'🏆 Player 1 Wins!':'🏆 Player 2 Wins!';
+    w===1?'🏆 שחקן 1 מנצח!':'🏆 שחקן 2 מנצח!';
   document.getElementById('go-score').textContent=s[0]+' : '+s[1];
   document.getElementById('go-sub').textContent=
-    w===(myRole==='p1'?1:2)?'Excellent — you won!':'Good game — try again!';
+    w===(myRole==='p1'?1:2)?'מעולה — ניצחת!':'משחק טוב — נסה שוב!';
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -882,7 +1018,7 @@ function showGO(w,s){
 function initCanvas(){
   canvas=document.getElementById('c');
   ctx=canvas.getContext('2d');
-  resize(); window.addEventListener('resize',resize);
+  resize(); initCrowd(); window.addEventListener('resize',resize);
 }
 
 function resize(){
@@ -890,12 +1026,14 @@ function resize(){
   canvas.width=window.innerWidth*dpr; canvas.height=window.innerHeight*dpr;
   canvas.style.width=window.innerWidth+'px'; canvas.style.height=window.innerHeight+'px';
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  initCrowd();
 }
 
 function doStart(){
   showScr('game');
   score=[0,0]; rally=0; ball.ip=false; ball.spd=BALL_SPD0;
   parts.length=0; flash=0; serving=1;
+  aiUpdateT = 0; aiTargetX = 50; aiTargetY = 25;
   updHUD();
   if(isHost){ startSync(); setTimeout(serveBall, SERVE_DELAY); }
 }
@@ -904,9 +1042,12 @@ function loop(ts){
   raf=requestAnimationFrame(loop);
   const dt=Math.min((ts-(lt||ts))/1000,.05);
   lt=ts;
+  crowdTick += dt*2;
 
   if(appState==='game'){
-    if(isHost){ updBall(dt); updParts(dt); }
+    if(isHost){ updBall(dt); updParts(dt); updAI(dt); }
+    hitTimerP1 = Math.max(0, hitTimerP1 - dt*60);
+    hitTimerP2 = Math.max(0, hitTimerP2 - dt*60);
     render(ts);
   } else if(appState==='calib'){
     render(ts);
@@ -917,14 +1058,13 @@ function loop(ts){
 }
 
 // ── Mouse / touch fallback ──
-// Mouse/touch fallback — only active when hand tracking is NOT locked
 window.addEventListener('mousemove',e=>{
-  if(appState!=='game'||cState==='LOCKED') return;
+  if(appState!=='game'||cState!=='LOCKED') return;
   const r=canvas.getBoundingClientRect();
   ptrToRacket((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
 });
 window.addEventListener('touchmove',e=>{
-  if(appState!=='game'||cState==='LOCKED') return;
+  if(appState!=='game'||cState!=='LOCKED') return;
   e.preventDefault();
   const r=canvas.getBoundingClientRect(), t=e.touches[0];
   ptrToRacket((t.clientX-r.left)/r.width,(t.clientY-r.top)/r.height);
@@ -944,7 +1084,17 @@ window.addEventListener('load',()=>{
 
   document.getElementById('btn-solo').addEventListener('click',()=>{
     wakeAC(); isHost=true; myRole='p1';
-    showScr('calib'); initMP();
+    showScr('difficulty');
+  });
+
+  document.getElementById('btn-easy').addEventListener('click',()=>{
+    aiDifficulty='easy'; showScr('calib'); initMP();
+  });
+  document.getElementById('btn-medium').addEventListener('click',()=>{
+    aiDifficulty='medium'; showScr('calib'); initMP();
+  });
+  document.getElementById('btn-hard').addEventListener('click',()=>{
+    aiDifficulty='hard'; showScr('calib'); initMP();
   });
 
   document.getElementById('btn-skip-calib').addEventListener('click',()=>{
