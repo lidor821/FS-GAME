@@ -183,10 +183,11 @@ const COURT_W = 100, COURT_H = 50;
 
 // Isometric transform (scale × canvas-height)
 // toScreen(cx,cy): sx = W*0.5 + (cx*AX + cy*BX)*H
-//                  sy = H*0.11 + (cx*AY + cy*BY)*H
-// Tuned so corners sit nicely on a 16:9 landscape screen
-const AX =  0.009,  BX = -0.011;
-const AY =  0.0035, BY =  0.012;
+//                  sy = H*0.10 + (cx*AY + cy*BY)*H
+// Constraint: BX = -2*AX → court centre maps to screen centre-x
+// AX=0.008 → court spans 90% of 16:9 screen width
+const AX =  0.008,  BX = -0.016;
+const AY =  0.0025, BY =  0.010;
 
 const BALL_SPD0   = 22;   // court-units / sec at serve
 const BALL_SPDMAX = 55;
@@ -198,8 +199,8 @@ const RW = 8, RH = 14;      // racket half-widths in court units
 const P1_XMIN = 1,  P1_XMAX = 46;
 const P2_XMIN = 54, P2_XMAX = 99;
 
-const EMA_POS  = 0.22;
-const EMA_VEL  = 0.18;
+const EMA_POS  = 0.32;
+const EMA_VEL  = 0.26;
 const CALIB_MS = 1500;
 const CALIB_TOL= 0.20;   // fraction-of-frame for the lock zone
 
@@ -262,7 +263,7 @@ function toS(cx, cy){
   const W=canvas.width/dpr, H=canvas.height/dpr;
   return {
     sx: W*.5 + (cx*AX + cy*BX)*H,
-    sy: H*.11 + (cx*AY + cy*BY)*H
+    sy: H*.10 + (cx*AY + cy*BY)*H
   };
 }
 
