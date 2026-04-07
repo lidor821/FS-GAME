@@ -18,7 +18,26 @@
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
   font-family:'Segoe UI',system-ui,sans-serif;color:var(--white);user-select:none}
 
-#c{position:fixed;top:0;left:0;width:100%;height:100%;display:block}
+#c{position:fixed;top:0;left:0;width:100%;height:100%;display:block;z-index:5}
+
+/* ── Player video feeds (small corner boxes, behind canvas) ── */
+.video-feed{position:fixed;bottom:24px;width:200px;height:150px;z-index:3;
+  display:none;overflow:hidden;border-radius:12px;pointer-events:none;
+  box-shadow:0 4px 24px rgba(0,0,0,.7)}
+.video-feed.visible{display:block}
+#p1-video-container{left:24px;border:2px solid rgba(0,255,136,.6)}
+#p2-video-container{right:24px;border:2px solid rgba(255,68,170,.6)}
+.video-feed video{width:100%;height:100%;object-fit:cover;
+  transform:scaleX(-1);display:block;
+  filter:brightness(1.1) contrast(1.1)}
+.vid-tint{display:none}
+.vid-label{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  font-size:11px;font-weight:700;letter-spacing:1px;padding:2px 10px;
+  border-radius:6px;white-space:nowrap}
+#p1-video-container .vid-label{color:#00ff88;
+  background:rgba(0,0,0,.55);border:1px solid rgba(0,255,136,.35)}
+#p2-video-container .vid-label{color:#ff44aa;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,68,170,.35)}
 
 /* ── Screens ── */
 .screen{position:fixed;inset:0;display:none;flex-direction:column;
@@ -108,6 +127,18 @@ input.room-input:focus{border-color:var(--p2);color:var(--p2)}
 
 <a id="back-btn" href="../../index.html">← חזור</a>
 
+<!-- ══ PLAYER VIDEO FEEDS ══ -->
+<div id="p1-video-container" class="video-feed">
+  <video id="p1-vid" autoplay muted playsinline></video>
+  <div class="vid-tint"></div>
+  <div class="vid-label">P1</div>
+</div>
+<div id="p2-video-container" class="video-feed">
+  <video id="p2-vid" autoplay muted playsinline></video>
+  <div class="vid-tint"></div>
+  <div class="vid-label" id="p2-vid-label">P2</div>
+</div>
+
 <!-- ══ LOBBY ══ -->
 <div id="screen-lobby" class="screen active">
   <div class="title">🏒 הוקי אוויר</div>
@@ -188,8 +219,8 @@ const COURT_OY_FRAC = 0.11;   // top margin (below HUD)
 const COURT_PW_FRAC = 0.95;   // court pixel width as fraction of W
 const COURT_PH_FRAC = 0.82;   // court pixel height as fraction of H
 
-const BALL_SPD0   = 32;   // puck speed at serve
-const BALL_SPDMAX = 80;
+const BALL_SPD0   = 22;   // puck speed at serve
+const BALL_SPDMAX = 55;
 const BALL_SPDINC = 2.0;
 const STRIKE_THR  = 0.016; // smoothed hand-vel magnitude → boost
 const STRIKE_MULT = 1.6;
@@ -250,6 +281,7 @@ let AC = null;
 
 // Network
 let peer=null, dc=null, syncTimer=null;
+let localStream=null, mediaCall=null, pendingCall=null;
 
 let aiDifficulty = 'medium';
 let raf, lt;
@@ -349,6 +381,8 @@ function initMP(){
     if(feedEl.srcObject){
       dispEl.srcObject=feedEl.srcObject;
       dispEl.play().catch(()=>{});
+      localStream=feedEl.srcObject;
+      if(pendingCall){ answerCall(pendingCall); pendingCall=null; }
     }
     setCalibInstr('החזק את היד הפתוחה בתוך העיגול');
   }).catch(err=>{
@@ -434,6 +468,56 @@ function bothDone(){
 
 function setCalibInstr(t){ const e=document.getElementById('calib-instr'); if(e) e.textContent=t; }
 function setCalibMsg(t)  { const e=document.getElementById('calib-status'); if(e) e.textContent=t; }
+
+// ── Video feed management ──
+function attachVid(elId, stream){
+  const v=document.getElementById(elId);
+  if(!v||!stream) return;
+  v.srcObject=stream;
+  v.play().catch(()=>{});
+}
+
+function showVideoFeeds(){
+  const solo=!dc||!dc.open;
+  // Always show own video in the correct box
+  if(myRole==='p1'){
+    attachVid('p1-vid', localStream);
+    document.getElementById('p1-video-container').classList.add('visible');
+    if(!solo) document.getElementById('p2-video-container').classList.add('visible');
+  } else {
+    attachVid('p2-vid', localStream);
+    document.getElementById('p2-video-container').classList.add('visible');
+    if(!solo) document.getElementById('p1-video-container').classList.add('visible');
+  }
+}
+
+function hideVideoFeeds(){
+  ['p1-video-container','p2-video-container'].forEach(id=>{
+    document.getElementById(id).classList.remove('visible');
+  });
+  ['p1-vid','p2-vid'].forEach(id=>{
+    const v=document.getElementById(id);
+    v.srcObject=null;
+  });
+}
+
+function answerCall(call){
+  call.answer(localStream||undefined);
+  call.on('stream',remoteStream=>{
+    // Host called → guest's remote is host = p1; guest called → host's remote is guest = p2
+    attachVid(isHost?'p2-vid':'p1-vid', remoteStream);
+  });
+  mediaCall=call;
+}
+
+function tryVideoCall(){
+  // Host calls the guest after both cameras are up
+  if(!dc?.peer) return;
+  if(!localStream){ setTimeout(tryVideoCall,200); return; }
+  if(mediaCall) return; // already called
+  mediaCall=peer.call(dc.peer, localStream);
+  mediaCall.on('stream',remoteStream=>{ attachVid('p2-vid', remoteStream); });
+}
 
 // ── Calibration overlay ──
 function drawCalibOverlay(){
@@ -552,7 +636,10 @@ function createRoom(){
     dc=conn; wireConn();
     lobSt('היריב התחבר! מתחיל כיול…');
     setTimeout(()=>{ snd({type:'beginCalib'}); showScr('calib'); initMP(); }, 700);
+    setTimeout(tryVideoCall, 1200); // call guest after camera likely started
   });
+  // Listen for incoming media calls (in case guest calls us back)
+  peer.on('call',call=>{ pendingCall=call; if(localStream){ answerCall(call); pendingCall=null; } });
 }
 
 function joinRoom(){
@@ -564,6 +651,8 @@ function joinRoom(){
   peer=new Peer({debug:0});
   peer.on('open',()=>{ dc=peer.connect('tennismatch-'+code,{reliable:true}); wireConn(); });
   peer.on('error',e=>lobErr('לא הצלח להתחבר: '+e.type));
+  // Guest: listen for incoming video call from host
+  peer.on('call',call=>{ pendingCall=call; if(localStream){ answerCall(call); pendingCall=null; } });
 }
 
 function wireConn(){
@@ -730,13 +819,16 @@ function updAI(dt){
       const predicted = predictBallYAtP2();
       const spread = aiDifficulty==='hard'?2: aiDifficulty==='medium'?5:10;
       aiTargetY = predicted + (Math.random()-0.5)*spread;
-      aiTargetX = 75 + (Math.random()-0.5)*40;
+      // Move forward to intercept: hard=55–70, medium=62–78, easy=72–90
+      const fwd = aiDifficulty==='hard'?55: aiDifficulty==='medium'?62:72;
+      aiTargetX = fwd + Math.random()*(aiDifficulty==='hard'?15:aiDifficulty==='medium'?16:18);
       if(aiDifficulty==='easy' && Math.random()<0.22){
         aiTargetY = COURT_H*0.5 + (Math.random()-0.5)*15;
       }
     } else {
-      aiTargetX = 85;
-      aiTargetY = COURT_H*0.52 + (Math.random()-0.5)*(aiDifficulty==='hard'?4:8);
+      // Ball heading away — retreat to home position (80–90)
+      aiTargetX = 80 + Math.random()*10;
+      aiTargetY = COURT_H*0.5 + (Math.random()-0.5)*(aiDifficulty==='hard'?4:8);
     }
   }
   const dx = aiTargetX - p2R.x;
@@ -792,8 +884,7 @@ function render(ts){
 }
 
 function drawBg(W,H){
-  // Deep arena darkness
-  ctx.fillStyle='#04070e'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(4,7,14,0.82)'; ctx.fillRect(0,0,W,H);
 
   ctx.save();
   ctx.globalCompositeOperation='lighter';
@@ -818,9 +909,9 @@ function drawCourtFill(){
   ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); ctx.closePath();
   // Polished dark-blue air hockey table surface
   const g=ctx.createLinearGradient(r.x,r.y,r.x+r.w,r.y+r.h);
-  g.addColorStop(0,'#0c1828'); g.addColorStop(0.5,'#111e32'); g.addColorStop(1,'#0c1828');
+  g.addColorStop(0,'rgba(12,24,40,0.60)'); g.addColorStop(0.5,'rgba(17,30,50,0.60)'); g.addColorStop(1,'rgba(12,24,40,0.60)');
   ctx.fillStyle=g; ctx.fill();
-  // Subtle gloss sheen across the top half
+  // Subtle gloss sheen
   ctx.clip();
   const sheen=ctx.createLinearGradient(r.x,r.y,r.x,r.y+r.h*.5);
   sheen.addColorStop(0,'rgba(255,255,255,0.04)');
